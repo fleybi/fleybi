@@ -177,6 +177,7 @@
             width: auto;
             height: auto;
             object-fit: contain;
+            border-radius: 20px;
         }
 
         /* Контейнер для картинки соцсетей */
@@ -195,6 +196,7 @@
             width: auto;
             height: auto;
             object-fit: contain;
+            border-radius: 20px;
         }
 
         /* Невидимые кликабельные области */
@@ -674,16 +676,22 @@
             socialsModal.classList.remove('active');
         });
 
+        // Закрытие при клике на любое место модального окна
         aboutModal.addEventListener('click', (e) => {
-            if (e.target === aboutModal) {
-                aboutModal.classList.remove('active');
-            }
+            aboutModal.classList.remove('active');
         });
 
         socialsModal.addEventListener('click', (e) => {
-            if (e.target === socialsModal) {
-                socialsModal.classList.remove('active');
-            }
+            socialsModal.classList.remove('active');
+        });
+
+        // Предотвращаем закрытие при клике на саму картинку
+        document.querySelector('.about-photo-fullscreen').addEventListener('click', (e) => {
+            e.stopPropagation();
+        });
+
+        document.querySelector('.socials-image-container').addEventListener('click', (e) => {
+            e.stopPropagation();
         });
     </script>
 </body>
