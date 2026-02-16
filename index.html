@@ -133,7 +133,7 @@
             padding: 3rem;
             border-radius: 10px;
             border: 1px solid rgba(255, 255, 255, 0.2);
-            max-width: 500px;
+            max-width: 600px;
             text-align: center;
             position: relative;
         }
@@ -157,6 +157,17 @@
             margin-bottom: 1.5rem;
             letter-spacing: 0.2rem;
             font-weight: 300;
+        }
+
+        /* Фотография в About */
+        .about-photo {
+            width: 200px;
+            height: 200px;
+            border-radius: 10px;
+            margin: 0 auto 1.5rem;
+            object-fit: cover;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
         }
 
         .modal-content p {
@@ -357,6 +368,11 @@
             .modal-content {
                 margin: 20px;
                 padding: 2rem;
+                max-width: 90%;
+            }
+            .about-photo {
+                width: 150px;
+                height: 150px;
             }
             .controls-panel {
                 bottom: 20px;
@@ -408,11 +424,12 @@
         </div>
     </div>
 
-    <!-- Модальное окно About -->
+    <!-- Модальное окно About С ФОТОГРАФИЕЙ -->
     <div id="aboutModal" class="modal">
         <div class="modal-content">
             <span class="close" id="closeAbout">&times;</span>
             <h2>About</h2>
+            <img src="fleybi.png" alt="Fleybi" class="about-photo">
             <p>Николай, занимаюсь разным, короче чёткий пацан</p>
         </div>
     </div>
