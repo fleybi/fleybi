@@ -349,7 +349,7 @@
 <body>
     <!-- Видео фон -->
     <div class="video-background">
-        <video id="bgVideo" autoplay muted playsinline></video>
+        <video id="bgVideo" loop muted playsinline></video>
     </div>
     <div class="overlay"></div>
 
@@ -422,44 +422,18 @@
             'scally.mp4'
         ];
 
-        let currentVideoIndex = 0;
         const bgVideo = document.getElementById('bgVideo');
 
-        // Функция для загрузки и воспроизведения видео
-        function playVideo(index) {
-            bgVideo.src = videos[index];
-            bgVideo.load();
-            
-            // Пробуем воспроизвести с обработкой ошибок
-            const playPromise = bgVideo.play();
-            
-            if (playPromise !== undefined) {
-                playPromise.catch(error => {
-                    console.log('Autoplay prevented:', error);
-                    // Если автовоспроизведение заблокировано, пробуем снова через секунду
-                    setTimeout(() => {
-                        bgVideo.play();
-                    }, 1000);
-                });
-            }
-        }
+        // Получаем индекс последнего видео из localStorage
+        let currentVideoIndex = parseInt(localStorage.getItem('videoIndex') || '0');
 
-        // Загружаем первое видео при старте
-        playVideo(currentVideoIndex);
+        // Загружаем текущее видео
+        bgVideo.src = videos[currentVideoIndex];
+        bgVideo.play();
 
-        // Когда видео заканчивается, переключаемся на следующее
-        bgVideo.addEventListener('ended', () => {
-            currentVideoIndex = (currentVideoIndex + 1) % videos.length;
-            playVideo(currentVideoIndex);
-        });
-
-        // Обработка ошибок загрузки видео
-        bgVideo.addEventListener('error', (e) => {
-            console.error('Video error:', e);
-            // Пробуем следующее видео при ошибке
-            currentVideoIndex = (currentVideoIndex + 1) % videos.length;
-            playVideo(currentVideoIndex);
-        });
+        // Сохраняем следующий индекс для следующего захода
+        const nextIndex = (currentVideoIndex + 1) % videos.length;
+        localStorage.setItem('videoIndex', nextIndex);
 
         // Модальные окна
         const aboutLink = document.getElementById('aboutLink');
