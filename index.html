@@ -179,6 +179,68 @@
             object-fit: contain;
         }
 
+        /* Контейнер для картинки соцсетей */
+        .socials-image-container {
+            position: relative;
+            max-width: 100%;
+            max-height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .socials-background {
+            max-width: 100%;
+            max-height: 100vh;
+            width: auto;
+            height: auto;
+            object-fit: contain;
+        }
+
+        /* Невидимые кликабельные области */
+        .social-hotspot {
+            position: absolute;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .social-hotspot:hover {
+            transform: scale(1.1);
+        }
+
+        /* Позиции для каждой иконки (настроены под твою картинку) */
+        .youtube-hotspot {
+            top: 35%;
+            left: 50%;
+            width: 10%;
+            height: 15%;
+            transform: translateX(-50%);
+        }
+
+        .vk-hotspot {
+            top: 35%;
+            left: 61%;
+            width: 10%;
+            height: 15%;
+            transform: translateX(-50%);
+        }
+
+        .telegram-hotspot {
+            top: 35%;
+            left: 72%;
+            width: 10%;
+            height: 15%;
+            transform: translateX(-50%);
+        }
+
+        .discord-hotspot {
+            top: 35%;
+            left: 83%;
+            width: 10%;
+            height: 15%;
+            transform: translateX(-50%);
+        }
+
         .modal-content p {
             font-size: 1.1rem;
             line-height: 1.8;
@@ -439,25 +501,15 @@
 
     <!-- Модальное окно Socials -->
     <div id="socialsModal" class="modal">
-        <div class="modal-content">
+        <div class="modal-content-fullscreen">
             <span class="close" id="closeSocials">&times;</span>
-            <h2>Мои соцсети</h2>
-            <div class="social-links">
-                <a href="https://t.me/fleybi" target="_blank" title="Telegram">
-                    <svg class="social-icon" viewBox="0 0 24 24" fill="white" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.562 8.161l-1.87 8.831c-.141.631-.511.778-1.034.485l-2.856-2.107-1.377 1.327c-.152.153-.28.28-.574.28l.205-2.906 5.297-4.787c.23-.203-.05-.316-.357-.114l-6.544 4.117-2.821-.88c-.613-.192-.626-.613.128-.907l11.023-4.25c.511-.184.958.125.794.897z"/>
-                    </svg>
-                </a>
-                <a href="https://vk.com/fleybov" target="_blank" title="VK">
-                    <svg class="social-icon" viewBox="0 0 24 24" fill="white" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M23.058 7.68c.146-.442 0-.768-.63-.768h-2.076c-.53 0-.774.28-.92.589 0 0-1.076 2.622-2.6 4.326-.492.493-.716.65-1.063.65-.146 0-.357-.157-.357-.6V7.68c0-.53-.154-.768-.6-.768h-3.254c-.331 0-.53.246-.53.478 0 .502.748.617.826 2.027v3.064c0 .672-.122.793-.47.793-.86 0-2.95-2.634-4.19-5.647-.243-.707-.485-.993-1.02-.993H4.3c-.595 0-.714.28-.714.589 0 .55.708 3.335 3.297 7.003 1.725 2.477 4.154 3.82 6.37 3.82 1.328 0 1.492-.297 1.492-.809v-1.865c0-.595.125-.714.546-.714.31 0 .84.157 2.078 1.363 1.415 1.415 1.648 2.05 2.443 2.05h2.076c.595 0 .892-.297.72-.884-.188-.585-.862-1.434-1.756-2.44-.492-.58-1.23-1.204-1.453-1.516-.31-.4-.222-.577 0-.933 0 0 2.578-3.632 2.847-4.864z"/>
-                    </svg>
-                </a>
-                <a href="https://youtube.com/@fleybi" target="_blank" title="YouTube">
-                    <svg class="social-icon" viewBox="0 0 24 24" fill="white" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
-                    </svg>
-                </a>
+            <div class="socials-image-container">
+                <img src="socials.png" alt="Мои соцсети" class="socials-background">
+                <!-- Невидимые кликабельные области -->
+                <a href="https://youtube.com/@fleybi" target="_blank" class="social-hotspot youtube-hotspot"></a>
+                <a href="https://vk.com/fleybov" target="_blank" class="social-hotspot vk-hotspot"></a>
+                <a href="https://t.me/fleybi" target="_blank" class="social-hotspot telegram-hotspot"></a>
+                <a href="https://discord.gg/your-discord" target="_blank" class="social-hotspot discord-hotspot"></a>
             </div>
         </div>
     </div>
@@ -502,16 +554,16 @@
     </div>
 
     <script>
-      // Список видео
-const videos = [
-    'fire_alarm.mp4',
-    'are_you_happy.mp4',
-    'lovesong.mp4',
-    'alabaster.mp4',
-    'scally.mp4',
-    'villan.mp4',
-    'rocket.mp4'
-];
+        // Список видео
+        const videos = [
+            'fire_alarm.mp4',
+            'are_you_happy.mp4',
+            'lovesong.mp4',
+            'alabaster.mp4',
+            'scally.mp4',
+            'villan.mp4',
+            'rocket.mp4'
+        ];
 
         const bgVideo = document.getElementById('bgVideo');
         const soundToggle = document.getElementById('soundToggle');
