@@ -116,7 +116,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.8);
+            background: rgba(0, 0, 0, 0.95);
             z-index: 100;
             justify-content: center;
             align-items: center;
@@ -138,6 +138,16 @@
             position: relative;
         }
 
+        /* Новый стиль для полноэкранного контента */
+        .modal-content-fullscreen {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+
         .close {
             position: absolute;
             top: 20px;
@@ -146,6 +156,7 @@
             color: #fff;
             cursor: pointer;
             transition: color 0.3s ease;
+            z-index: 101;
         }
 
         .close:hover {
@@ -159,15 +170,13 @@
             font-weight: 300;
         }
 
-        /* Фотография в About */
-        .about-photo {
-            width: 200px;
-            height: 200px;
-            border-radius: 10px;
-            margin: 0 auto 1.5rem;
-            object-fit: cover;
-            border: 3px solid rgba(255, 255, 255, 0.3);
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
+        /* Фотография в About - полноэкранная версия */
+        .about-photo-fullscreen {
+            max-width: 100%;
+            max-height: 100%;
+            width: auto;
+            height: auto;
+            object-fit: contain;
         }
 
         .modal-content p {
@@ -370,10 +379,6 @@
                 padding: 2rem;
                 max-width: 90%;
             }
-            .about-photo {
-                width: 150px;
-                height: 150px;
-            }
             .controls-panel {
                 bottom: 20px;
                 right: 20px;
@@ -424,13 +429,11 @@
         </div>
     </div>
 
-    <!-- Модальное окно About С ФОТОГРАФИЕЙ -->
+    <!-- Модальное окно About - ПОЛНОЭКРАННАЯ КАРТИНКА -->
     <div id="aboutModal" class="modal">
-        <div class="modal-content">
+        <div class="modal-content-fullscreen">
             <span class="close" id="closeAbout">&times;</span>
-            <h2>About</h2>
-            <img src="fleybi.png" alt="Fleybi" class="about-photo">
-            <p>Николай, занимаюсь разным, короче чёткий пацан</p>
+            <img src="fleybi.png" alt="Fleybi" class="about-photo-fullscreen">
         </div>
     </div>
 
@@ -506,6 +509,8 @@
             'lovesong.mp4',
             'alabaster.mp4',
             'scally.mp4'
+            'villan.mp4'
+            'rocket.mp4'
         ];
 
         const bgVideo = document.getElementById('bgVideo');
