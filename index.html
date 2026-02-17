@@ -11,134 +11,101 @@
             box-sizing: border-box;
         }
 
-        html {
-            scroll-behavior: smooth;
-        }
-
         body {
             font-family: 'Courier New', monospace;
+            overflow: hidden;
             background: #000;
         }
 
-        /* Главная секция с фоном */
-        .main-section {
-            position: relative;
-            height: 100vh;
-            width: 100%;
-            overflow: hidden;
-        }
-
-        .background-image {
-            position: absolute;
+        /* Видео фон */
+        .video-background {
+            position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            object-fit: contain;
-            object-position: center;
+            z-index: -2;
+            overflow: hidden;
         }
 
-        /* Красивые кнопки */
-        .menu-button {
+        .video-background video {
             position: absolute;
-            cursor: pointer;
-            transition: all 0.4s ease;
-            background: rgba(0, 0, 0, 0.7);
-            backdrop-filter: blur(15px);
-            border: 3px solid rgba(255, 255, 255, 0.4);
-            border-radius: 20px;
-            padding: 25px 35px;
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
-            z-index: 10;
+            top: 50%;
+            left: 50%;
+            min-width: 100%;
+            min-height: 100%;
+            width: auto;
+            height: auto;
+            transform: translate(-50%, -50%);
+            object-fit: cover;
         }
 
-        .menu-button:hover {
-            transform: translateY(-8px) scale(1.05);
-            border-color: rgba(255, 255, 255, 0.9);
-            box-shadow: 0 15px 50px rgba(0, 0, 0, 0.8);
-            background: rgba(0, 0, 0, 0.85);
+        /* Затемнение поверх видео для читаемости текста */
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: -1;
         }
 
-        .menu-button-icon {
-            width: 45px;
-            height: 45px;
-            fill: #fff;
-            filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.7));
-        }
-
-        .menu-button-text {
-            font-size: 1.4rem;
-            font-weight: bold;
-            color: #fff;
-            text-shadow: 0 3px 10px rgba(0, 0, 0, 0.9);
-            letter-spacing: 0.15rem;
-            white-space: nowrap;
-        }
-
-        /* Позиции кнопок */
-        .youtube-button {
-            top: 42%;
-            left: 3%;
-            border-color: rgba(255, 0, 0, 0.7);
-        }
-
-        .youtube-button:hover {
-            border-color: rgb(255, 0, 0);
-            background: rgba(255, 0, 0, 0.25);
-        }
-
-        .about-button {
-            top: 42%;
-            right: 3%;
-            border-color: rgba(255, 215, 0, 0.7);
-        }
-
-        .about-button:hover {
-            border-color: rgb(255, 215, 0);
-            background: rgba(255, 215, 0, 0.25);
-        }
-
-        .socials-button {
-            top: 63%;
-            right: 3%;
-            border-color: rgba(76, 175, 80, 0.7);
-        }
-
-        .socials-button:hover {
-            border-color: rgb(76, 175, 80);
-            background: rgba(76, 175, 80, 0.25);
-        }
-
-        /* Секция Spotify внизу */
-        .spotify-section {
-            min-height: 100vh;
-            background: linear-gradient(135deg, #1DB954 0%, #191414 100%);
+        .container {
+            position: relative;
+            z-index: 1;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            padding: 4rem 2rem;
+            height: 100vh;
+            color: #fff;
         }
 
-        .spotify-title {
-            font-size: 3.5rem;
-            color: #fff;
-            margin-bottom: 2rem;
-            text-align: center;
+        h1 {
+            font-size: 5rem;
             font-weight: 300;
             letter-spacing: 0.3rem;
-            text-shadow: 0 4px 15px rgba(0, 0, 0, 0.6);
+            margin-bottom: 2rem;
+            text-shadow: 0 0 30px rgba(0, 0, 0, 0.8), 0 0 10px rgba(255, 255, 255, 0.5);
+            animation: fadeIn 2s ease-in;
         }
 
-        .spotify-player {
-            width: 90%;
-            max-width: 900px;
-            border-radius: 20px;
-            overflow: hidden;
-            box-shadow: 0 15px 50px rgba(0, 0, 0, 0.7);
+        .links {
+            display: flex;
+            gap: 2rem;
+            margin-top: 1rem;
+        }
+
+        .links a {
+            color: #fff;
+            text-decoration: none;
+            font-size: 1rem;
+            letter-spacing: 0.2rem;
+            padding: 0.5rem 0;
+            position: relative;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            text-shadow: 0 0 10px rgba(0, 0, 0, 0.8);
+        }
+
+        .links a:hover {
+            color: #aaa;
+        }
+
+        .links a::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 0;
+            height: 1px;
+            background: #fff;
+            transition: width 0.3s ease;
+        }
+
+        .links a:hover::after {
+            width: 100%;
         }
 
         /* Модальные окна */
@@ -161,6 +128,17 @@
             animation: fadeIn 0.3s ease-in;
         }
 
+        .modal-content {
+            background: rgba(20, 20, 20, 0.95);
+            padding: 3rem;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            max-width: 600px;
+            text-align: center;
+            position: relative;
+        }
+
+        /* Новый стиль для полноэкранного контента */
         .modal-content-fullscreen {
             width: 100%;
             height: 100%;
@@ -174,34 +152,39 @@
             position: absolute;
             top: 20px;
             right: 30px;
-            font-size: 2.5rem;
+            font-size: 2rem;
             color: #fff;
             cursor: pointer;
             transition: color 0.3s ease;
             z-index: 101;
-            text-shadow: 0 3px 10px rgba(0, 0, 0, 0.8);
         }
 
         .close:hover {
-            color: #ff4444;
+            color: #aaa;
+        }
+
+        .modal-content h2 {
+            font-size: 2rem;
+            margin-bottom: 1.5rem;
+            letter-spacing: 0.2rem;
+            font-weight: 300;
         }
 
         /* Фотография в About - полноэкранная версия */
         .about-photo-fullscreen {
-            max-width: 90%;
-            max-height: 90%;
+            max-width: 100%;
+            max-height: 100%;
             width: auto;
             height: auto;
             object-fit: contain;
             border-radius: 20px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
         }
 
         /* Контейнер для картинки соцсетей */
         .socials-image-container {
             position: relative;
-            max-width: 90%;
-            max-height: 90%;
+            max-width: 100%;
+            max-height: 100%;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -209,15 +192,14 @@
 
         .socials-background {
             max-width: 100%;
-            max-height: 100%;
+            max-height: 100vh;
             width: auto;
             height: auto;
             object-fit: contain;
             border-radius: 20px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
         }
 
-        /* Невидимые кликабельные области на картинке соцсетей */
+        /* Невидимые кликабельные области */
         .social-hotspot {
             position: absolute;
             cursor: pointer;
@@ -228,7 +210,7 @@
             transform: scale(1.1);
         }
 
-        /* Позиции для каждой иконки */
+        /* Позиции для каждой иконки (настроены под твою картинку) */
         .youtube-hotspot {
             top: 35%;
             left: 50%;
@@ -261,34 +243,180 @@
             transform: translateX(-50%);
         }
 
-        /* Стрелка вниз для скролла */
-        .scroll-arrow {
-            position: absolute;
-            bottom: 40px;
-            left: 50%;
-            transform: translateX(-50%);
-            cursor: pointer;
-            animation: bounce 2s infinite;
+        .modal-content p {
+            font-size: 1.1rem;
+            line-height: 1.8;
+            letter-spacing: 0.05rem;
+            color: #ddd;
+        }
+
+        .social-links {
+            display: flex;
+            gap: 1.5rem;
+            margin-top: 1rem;
+            padding: 1rem;
+            justify-content: center;
+        }
+
+        .social-links a {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            text-decoration: none;
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            transition: all 0.3s ease;
+            min-width: 70px;
+            min-height: 70px;
+        }
+
+        .social-links a:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateY(-5px);
+        }
+
+        .social-icon {
+            width: 40px;
+            height: 40px;
+            display: block;
+        }
+
+        /* Панель управления внизу справа */
+        .controls-panel {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
             z-index: 10;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            align-items: flex-end;
         }
 
-        .scroll-arrow svg {
-            width: 60px;
-            height: 60px;
+        /* Контролы видео (звук + кнопки) */
+        .video-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.6);
+            padding: 10px 15px;
+            border-radius: 30px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .control-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            width: 45px;
+            height: 45px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .control-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.1);
+        }
+
+        .control-btn svg {
+            width: 20px;
+            height: 20px;
             fill: #fff;
-            filter: drop-shadow(0 5px 15px rgba(0, 0, 0, 0.9));
         }
 
-        @keyframes bounce {
-            0%, 20%, 50%, 80%, 100% {
-                transform: translateX(-50%) translateY(0);
-            }
-            40% {
-                transform: translateX(-50%) translateY(-20px);
-            }
-            60% {
-                transform: translateX(-50%) translateY(-10px);
-            }
+        /* Регулятор громкости */
+        .volume-control {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .volume-slider {
+            width: 100px;
+            height: 4px;
+            -webkit-appearance: none;
+            appearance: none;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 2px;
+            outline: none;
+        }
+
+        .volume-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 14px;
+            height: 14px;
+            background: #fff;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .volume-slider::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+        }
+
+        .volume-slider::-moz-range-thumb {
+            width: 14px;
+            height: 14px;
+            background: #fff;
+            border-radius: 50%;
+            cursor: pointer;
+            border: none;
+        }
+
+        /* YouTube иконка слева снизу - ПОСТОЯННАЯ */
+        .youtube-promo {
+            position: fixed;
+            bottom: 30px;
+            left: 30px;
+            z-index: 10;
+            opacity: 1;
+        }
+
+        .youtube-promo a {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 20px;
+            background: linear-gradient(135deg, rgba(255, 0, 0, 0.3), rgba(200, 0, 0, 0.3));
+            border: 2px solid rgba(255, 0, 0, 0.6);
+            border-radius: 30px;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+            text-decoration: none;
+            box-shadow: 0 4px 15px rgba(255, 0, 0, 0.3);
+        }
+
+        .youtube-promo a:hover {
+            background: linear-gradient(135deg, rgba(255, 0, 0, 0.5), rgba(200, 0, 0, 0.5));
+            border-color: rgba(255, 0, 0, 0.9);
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(255, 0, 0, 0.5);
+        }
+
+        .youtube-promo svg {
+            width: 32px;
+            height: 32px;
+            fill: #fff;
+            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+        }
+
+        .youtube-promo-text {
+            color: #fff;
+            font-size: 0.9rem;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+            white-space: nowrap;
         }
 
         @keyframes fadeIn {
@@ -303,84 +431,69 @@
         }
 
         @media (max-width: 768px) {
-            .menu-button {
-                padding: 15px 20px;
+            h1 {
+                font-size: 3rem;
             }
-            .menu-button-icon {
-                width: 35px;
-                height: 35px;
+            .links {
+                flex-direction: column;
+                gap: 1rem;
             }
-            .menu-button-text {
-                font-size: 1rem;
+            .modal-content {
+                margin: 20px;
+                padding: 2rem;
+                max-width: 90%;
             }
-            .youtube-button {
-                left: 2%;
+            .controls-panel {
+                bottom: 20px;
+                right: 20px;
             }
-            .about-button, .socials-button {
-                right: 2%;
+            .video-controls {
+                padding: 8px 12px;
             }
-            .spotify-title {
-                font-size: 2rem;
+            .control-btn {
+                width: 40px;
+                height: 40px;
             }
-            .spotify-player {
-                width: 95%;
+            .control-btn svg {
+                width: 18px;
+                height: 18px;
+            }
+            .volume-slider {
+                width: 80px;
+            }
+            .youtube-promo {
+                bottom: 100px;
+                left: 20px;
+            }
+            .youtube-promo a {
+                padding: 10px 16px;
+            }
+            .youtube-promo svg {
+                width: 28px;
+                height: 28px;
+            }
+            .youtube-promo-text {
+                font-size: 0.8rem;
             }
         }
     </style>
 </head>
 <body>
-    <!-- Главная секция с фоном -->
-    <section class="main-section">
-        <img src="background.jpg" alt="Fleybi Background" class="background-image">
-        
-        <!-- Красивые кнопки с иконками -->
-        <div class="menu-button youtube-button" id="youtubeBtn">
-            <svg class="menu-button-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
-            </svg>
-            <span class="menu-button-text">МОЙ YOUTUBE</span>
-        </div>
+    <!-- Видео фон -->
+    <div class="video-background">
+        <video id="bgVideo" loop playsinline></video>
+    </div>
+    <div class="overlay"></div>
 
-        <div class="menu-button about-button" id="aboutBtn">
-            <svg class="menu-button-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/>
-            </svg>
-            <span class="menu-button-text">ОБО МНЕ</span>
+    <div class="container">
+        <h1>Fleybi</h1>
+        <div class="links">
+            <a id="aboutLink">Обо мне</a>
+            <a id="socialsLink">Мои соцсети</a>
         </div>
+    </div>
 
-        <div class="menu-button socials-button" id="socialsBtn">
-            <svg class="menu-button-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/>
-            </svg>
-            <span class="menu-button-text">МОИ СОЦСЕТИ</span>
-        </div>
-
-        <!-- Стрелка для скролла вниз -->
-        <div class="scroll-arrow" onclick="scrollToSpotify()">
-            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path d="M7 10l5 5 5-5z"/>
-            </svg>
-        </div>
-    </section>
-
-    <!-- Секция Spotify -->
-    <section class="spotify-section" id="spotifySection">
-        <h2 class="spotify-title">МОЯ МУЗЫКА</h2>
-        <div class="spotify-player">
-            <iframe 
-                style="border-radius:12px" 
-                src="https://open.spotify.com/embed/playlist/10upVfR9X7RpPFKHksruXx?utm_source=generator&theme=0" 
-                width="100%" 
-                height="600" 
-                frameBorder="0" 
-                allowfullscreen="" 
-                allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" 
-                loading="lazy">
-            </iframe>
-        </div>
-    </section>
-
-    <!-- Модальное окно About -->
+    <!-- Модальное окно About - ПОЛНОЭКРАННАЯ КАРТИНКА -->
     <div id="aboutModal" class="modal">
         <div class="modal-content-fullscreen">
             <span class="close" id="closeAbout">&times;</span>
@@ -403,30 +516,157 @@
         </div>
     </div>
 
+    <!-- Панель управления -->
+    <div class="controls-panel">
+        <div class="video-controls">
+            <!-- Предыдущее видео -->
+            <div class="control-btn" id="prevBtn" title="Предыдущее видео">
+                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/>
+                </svg>
+            </div>
+
+            <!-- Следующее видео -->
+            <div class="control-btn" id="nextBtn" title="Следующее видео">
+                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/>
+                </svg>
+            </div>
+
+            <!-- Управление звуком -->
+            <div class="volume-control">
+                <div class="control-btn" id="soundToggle" title="Вкл/Выкл звук">
+                    <svg id="soundIcon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
+                    </svg>
+                </div>
+                <input type="range" id="volumeSlider" class="volume-slider" min="0" max="100" value="50" title="Громкость">
+            </div>
+        </div>
+    </div>
+
+    <!-- YouTube промо иконка - ПОСТОЯННАЯ -->
+    <div class="youtube-promo">
+        <a href="https://www.youtube.com/@fleybi" target="_blank" title="Subscribe on YouTube">
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+            </svg>
+            <span class="youtube-promo-text">MY YOUTUBE</span>
+        </a>
+    </div>
+
     <script>
-        // Скролл к секции Spotify
-        function scrollToSpotify() {
-            document.getElementById('spotifySection').scrollIntoView({ behavior: 'smooth' });
+        // Список видео
+        const videos = [
+            'fire_alarm.mp4',
+            'are_you_happy.mp4',
+            'lovesong.mp4',
+            'alabaster.mp4',
+            'scally.mp4',
+            'villan.mp4',
+            'rocket.mp4'
+        ];
+
+        const bgVideo = document.getElementById('bgVideo');
+        const soundToggle = document.getElementById('soundToggle');
+        const soundIcon = document.getElementById('soundIcon');
+        const volumeSlider = document.getElementById('volumeSlider');
+        const prevBtn = document.getElementById('prevBtn');
+        const nextBtn = document.getElementById('nextBtn');
+
+        // Получаем индекс последнего видео из localStorage
+        let currentVideoIndex = parseInt(localStorage.getItem('videoIndex') || '0');
+
+        // Музыка включена по умолчанию
+        let isMuted = false;
+
+        // Функция для загрузки видео
+        function loadVideo(index) {
+            currentVideoIndex = index;
+            bgVideo.src = videos[currentVideoIndex];
+            bgVideo.volume = 0.5; // Громкость 50% по умолчанию
+            bgVideo.muted = false; // Звук включен
+            
+            // Воспроизводим с обработкой ошибок
+            const playPromise = bgVideo.play();
+            if (playPromise !== undefined) {
+                playPromise.catch(error => {
+                    console.log('Autoplay prevented:', error);
+                    // Если браузер блокирует автовоспроизведение со звуком
+                    bgVideo.muted = true;
+                    isMuted = true;
+                    volumeSlider.value = 0;
+                    soundIcon.innerHTML = '<path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/>';
+                    bgVideo.play();
+                });
+            }
+            
+            // Сохраняем следующий индекс
+            const nextIndex = (currentVideoIndex + 1) % videos.length;
+            localStorage.setItem('videoIndex', nextIndex);
         }
 
-        // Обработчики кликов на кнопки
-        document.getElementById('youtubeBtn').addEventListener('click', () => {
-            window.open('https://www.youtube.com/@fleybi', '_blank');
+        // Загружаем текущее видео при старте
+        loadVideo(currentVideoIndex);
+
+        // Кнопка "Следующее видео"
+        nextBtn.addEventListener('click', () => {
+            const nextIndex = (currentVideoIndex + 1) % videos.length;
+            loadVideo(nextIndex);
         });
 
-        document.getElementById('aboutBtn').addEventListener('click', () => {
-            document.getElementById('aboutModal').classList.add('active');
+        // Кнопка "Предыдущее видео"
+        prevBtn.addEventListener('click', () => {
+            const prevIndex = (currentVideoIndex - 1 + videos.length) % videos.length;
+            loadVideo(prevIndex);
         });
 
-        document.getElementById('socialsBtn').addEventListener('click', () => {
-            document.getElementById('socialsModal').classList.add('active');
+        // Управление звуком (вкл/выкл)
+        soundToggle.addEventListener('click', () => {
+            isMuted = !isMuted;
+            bgVideo.muted = isMuted;
+            
+            if (isMuted) {
+                volumeSlider.value = 0;
+                soundIcon.innerHTML = '<path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/>';
+            } else {
+                volumeSlider.value = 50;
+                bgVideo.volume = 0.5;
+                soundIcon.innerHTML = '<path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>';
+            }
+        });
+
+        // Регулятор громкости
+        volumeSlider.addEventListener('input', (e) => {
+            const volume = e.target.value / 100;
+            bgVideo.volume = volume;
+            
+            if (volume === 0) {
+                bgVideo.muted = true;
+                isMuted = true;
+                soundIcon.innerHTML = '<path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/>';
+            } else {
+                bgVideo.muted = false;
+                isMuted = false;
+                soundIcon.innerHTML = '<path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>';
+            }
         });
 
         // Модальные окна
+        const aboutLink = document.getElementById('aboutLink');
+        const socialsLink = document.getElementById('socialsLink');
         const aboutModal = document.getElementById('aboutModal');
         const socialsModal = document.getElementById('socialsModal');
         const closeAbout = document.getElementById('closeAbout');
         const closeSocials = document.getElementById('closeSocials');
+
+        aboutLink.addEventListener('click', () => {
+            aboutModal.classList.add('active');
+        });
+
+        socialsLink.addEventListener('click', () => {
+            socialsModal.classList.add('active');
+        });
 
         closeAbout.addEventListener('click', () => {
             aboutModal.classList.remove('active');
