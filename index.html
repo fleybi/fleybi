@@ -11,10 +11,21 @@
             box-sizing: border-box;
         }
 
+        html {
+            scroll-behavior: smooth;
+        }
+
         body {
             font-family: 'Courier New', monospace;
-            overflow: hidden;
             background: #000;
+        }
+
+        /* Главная секция с видео фоном */
+        .main-section {
+            position: relative;
+            height: 100vh;
+            width: 100%;
+            overflow: hidden;
         }
 
         /* Видео фон */
@@ -106,6 +117,68 @@
 
         .links a:hover::after {
             width: 100%;
+        }
+
+        /* Стрелка вниз для скролла */
+        .scroll-arrow {
+            position: absolute;
+            bottom: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            cursor: pointer;
+            animation: bounce 2s infinite;
+            z-index: 10;
+        }
+
+        .scroll-arrow svg {
+            width: 60px;
+            height: 60px;
+            fill: #fff;
+            filter: drop-shadow(0 5px 15px rgba(0, 0, 0, 0.9));
+        }
+
+        /* Секция с видеороликом */
+        .video-section {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 4rem 2rem;
+            position: relative;
+        }
+
+        .video-title {
+            font-size: 3.5rem;
+            color: #fff;
+            margin-bottom: 1rem;
+            text-align: center;
+            font-weight: 300;
+            letter-spacing: 0.3rem;
+            text-shadow: 0 4px 15px rgba(0, 0, 0, 0.6);
+        }
+
+        .video-subtitle {
+            font-size: 1.2rem;
+            color: rgba(255, 255, 255, 0.8);
+            margin-bottom: 3rem;
+            text-align: center;
+            letter-spacing: 0.1rem;
+        }
+
+        .video-player {
+            width: 90%;
+            max-width: 1000px;
+            aspect-ratio: 16 / 9;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 15px 50px rgba(0, 0, 0, 0.7);
+        }
+
+        .video-player iframe {
+            width: 100%;
+            height: 100%;
         }
 
         /* Модальные окна */
@@ -248,40 +321,6 @@
             line-height: 1.8;
             letter-spacing: 0.05rem;
             color: #ddd;
-        }
-
-        .social-links {
-            display: flex;
-            gap: 1.5rem;
-            margin-top: 1rem;
-            padding: 1rem;
-            justify-content: center;
-        }
-
-        .social-links a {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #fff;
-            text-decoration: none;
-            padding: 1rem;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 10px;
-            transition: all 0.3s ease;
-            min-width: 70px;
-            min-height: 70px;
-        }
-
-        .social-links a:hover {
-            background: rgba(255, 255, 255, 0.1);
-            transform: translateY(-5px);
-        }
-
-        .social-icon {
-            width: 40px;
-            height: 40px;
-            display: block;
         }
 
         /* Панель управления внизу справа */
@@ -430,6 +469,18 @@
             }
         }
 
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% {
+                transform: translateX(-50%) translateY(0);
+            }
+            40% {
+                transform: translateX(-50%) translateY(-20px);
+            }
+            60% {
+                transform: translateX(-50%) translateY(-10px);
+            }
+        }
+
         @media (max-width: 768px) {
             h1 {
                 font-size: 3rem;
@@ -475,23 +526,95 @@
             .youtube-promo-text {
                 font-size: 0.8rem;
             }
+            .video-title {
+                font-size: 2rem;
+            }
+            .video-subtitle {
+                font-size: 1rem;
+            }
+            .video-player {
+                width: 95%;
+            }
         }
     </style>
 </head>
 <body>
-    <!-- Видео фон -->
-    <div class="video-background">
-        <video id="bgVideo" loop playsinline></video>
-    </div>
-    <div class="overlay"></div>
-
-    <div class="container">
-        <h1>Fleybi</h1>
-        <div class="links">
-            <a id="aboutLink">Обо мне</a>
-            <a id="socialsLink">Мои соцсети</a>
+    <!-- Главная секция с видео фоном -->
+    <section class="main-section">
+        <!-- Видео фон -->
+        <div class="video-background">
+            <video id="bgVideo" loop playsinline></video>
         </div>
-    </div>
+        <div class="overlay"></div>
+
+        <div class="container">
+            <h1>Fleybi</h1>
+            <div class="links">
+                <a id="aboutLink">Обо мне</a>
+                <a id="socialsLink">Мои соцсети</a>
+            </div>
+        </div>
+
+        <!-- Стрелка для скролла вниз -->
+        <div class="scroll-arrow" onclick="scrollToVideo()">
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path d="M7 10l5 5 5-5z"/>
+            </svg>
+        </div>
+
+        <!-- Панель управления -->
+        <div class="controls-panel">
+            <div class="video-controls">
+                <!-- Предыдущее видео -->
+                <div class="control-btn" id="prevBtn" title="Предыдущее видео">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/>
+                    </svg>
+                </div>
+
+                <!-- Следующее видео -->
+                <div class="control-btn" id="nextBtn" title="Следующее видео">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/>
+                    </svg>
+                </div>
+
+                <!-- Управление звуком -->
+                <div class="volume-control">
+                    <div class="control-btn" id="soundToggle" title="Вкл/Выкл звук">
+                        <svg id="soundIcon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
+                        </svg>
+                    </div>
+                    <input type="range" id="volumeSlider" class="volume-slider" min="0" max="100" value="50" title="Громкость">
+                </div>
+            </div>
+        </div>
+
+        <!-- YouTube промо иконка - ПОСТОЯННАЯ -->
+        <div class="youtube-promo">
+            <a href="https://www.youtube.com/@fleybi" target="_blank" title="Subscribe on YouTube">
+                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+                </svg>
+                <span class="youtube-promo-text">MY YOUTUBE</span>
+            </a>
+        </div>
+    </section>
+
+    <!-- Секция с видеороликом -->
+    <section class="video-section" id="videoSection">
+        <h2 class="video-title">МОИ ВИДЕОРОЛИКИ</h2>
+        <p class="video-subtitle">Смотри мои лучшие ролики на YouTube</p>
+        <div class="video-player">
+            <iframe 
+                src="https://www.youtube.com/embed/Dut3saE7rZM" 
+                frameborder="0" 
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                allowfullscreen>
+            </iframe>
+        </div>
+    </section>
 
     <!-- Модальное окно About - ПОЛНОЭКРАННАЯ КАРТИНКА -->
     <div id="aboutModal" class="modal">
@@ -516,46 +639,12 @@
         </div>
     </div>
 
-    <!-- Панель управления -->
-    <div class="controls-panel">
-        <div class="video-controls">
-            <!-- Предыдущее видео -->
-            <div class="control-btn" id="prevBtn" title="Предыдущее видео">
-                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/>
-                </svg>
-            </div>
-
-            <!-- Следующее видео -->
-            <div class="control-btn" id="nextBtn" title="Следующее видео">
-                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/>
-                </svg>
-            </div>
-
-            <!-- Управление звуком -->
-            <div class="volume-control">
-                <div class="control-btn" id="soundToggle" title="Вкл/Выкл звук">
-                    <svg id="soundIcon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
-                    </svg>
-                </div>
-                <input type="range" id="volumeSlider" class="volume-slider" min="0" max="100" value="50" title="Громкость">
-            </div>
-        </div>
-    </div>
-
-    <!-- YouTube промо иконка - ПОСТОЯННАЯ -->
-    <div class="youtube-promo">
-        <a href="https://www.youtube.com/@fleybi" target="_blank" title="Subscribe on YouTube">
-            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
-            </svg>
-            <span class="youtube-promo-text">MY YOUTUBE</span>
-        </a>
-    </div>
-
     <script>
+        // Скролл к секции с видео
+        function scrollToVideo() {
+            document.getElementById('videoSection').scrollIntoView({ behavior: 'smooth' });
+        }
+
         // Список видео
         const videos = [
             'fire_alarm.mp4',
