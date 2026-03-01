@@ -20,7 +20,6 @@
             background: #000;
         }
 
-        /* Главная секция с видео фоном */
         .main-section {
             position: relative;
             height: 100vh;
@@ -28,7 +27,6 @@
             overflow: hidden;
         }
 
-        /* Видео фон */
         .video-background {
             position: fixed;
             top: 0;
@@ -51,7 +49,6 @@
             object-fit: cover;
         }
 
-        /* Затемнение поверх видео для читаемости текста */
         .overlay {
             position: fixed;
             top: 0;
@@ -119,7 +116,6 @@
             width: 100%;
         }
 
-        /* Стрелка вниз для скролла */
         .scroll-arrow {
             position: absolute;
             bottom: 40px;
@@ -137,7 +133,6 @@
             filter: drop-shadow(0 5px 15px rgba(0, 0, 0, 0.9));
         }
 
-        /* Секция с видеороликом */
         .video-section {
             min-height: 100vh;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -181,7 +176,6 @@
             height: 100%;
         }
 
-        /* Модальные окна */
         .modal {
             display: none;
             position: fixed;
@@ -211,7 +205,6 @@
             position: relative;
         }
 
-        /* Новый стиль для полноэкранного контента */
         .modal-content-fullscreen {
             width: 100%;
             height: 100%;
@@ -243,7 +236,6 @@
             font-weight: 300;
         }
 
-        /* Фотография в About - полноэкранная версия */
         .about-photo-fullscreen {
             max-width: 100%;
             max-height: 100%;
@@ -253,7 +245,6 @@
             border-radius: 20px;
         }
 
-        /* Контейнер для картинки соцсетей */
         .socials-image-container {
             position: relative;
             max-width: 100%;
@@ -272,7 +263,6 @@
             border-radius: 20px;
         }
 
-        /* Невидимые кликабельные области */
         .social-hotspot {
             position: absolute;
             cursor: pointer;
@@ -283,7 +273,6 @@
             transform: scale(1.1);
         }
 
-        /* Позиции для каждой иконки (настроены под твою картинку) */
         .youtube-hotspot {
             top: 35%;
             left: 50%;
@@ -323,7 +312,6 @@
             color: #ddd;
         }
 
-        /* Панель управления внизу справа */
         .controls-panel {
             position: fixed;
             bottom: 30px;
@@ -335,7 +323,6 @@
             align-items: flex-end;
         }
 
-        /* Контролы видео (звук + кнопки) */
         .video-controls {
             display: flex;
             gap: 10px;
@@ -371,7 +358,6 @@
             fill: #fff;
         }
 
-        /* Регулятор громкости */
         .volume-control {
             display: flex;
             align-items: center;
@@ -412,7 +398,6 @@
             border: none;
         }
 
-        /* Discord кнопка слева снизу */
         .discord-promo {
             position: fixed;
             bottom: 30px;
@@ -456,6 +441,34 @@
             letter-spacing: 0.5px;
             text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
             white-space: nowrap;
+        }
+
+        /* Счётчик посетителей */
+        .visitor-counter {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 10;
+            background: rgba(0,0,0,0.6);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 15px;
+            padding: 10px 16px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+            font-family: 'Courier New', monospace;
+            color: #fff;
+        }
+
+        .visitor-counter .label {
+            font-size: 0.6rem;
+            color: #aaa;
+            margin-bottom: 3px;
+            letter-spacing: 0.1rem;
+        }
+
+        .visitor-counter .count {
+            font-size: 1.3rem;
+            font-weight: bold;
         }
 
         @keyframes fadeIn {
@@ -539,9 +552,15 @@
     </style>
 </head>
 <body>
+
+    <!-- Счётчик посетителей (сверху справа) -->
+    <div class="visitor-counter">
+        <div class="label">ПОСЕТИТЕЛЕЙ</div>
+        <div class="count" id="ccounter">...</div>
+    </div>
+
     <!-- Главная секция с видео фоном -->
     <section class="main-section">
-        <!-- Видео фон -->
         <div class="video-background">
             <video id="bgVideo" loop playsinline></video>
         </div>
@@ -555,31 +574,24 @@
             </div>
         </div>
 
-        <!-- Стрелка для скролла вниз -->
         <div class="scroll-arrow" onclick="scrollToVideo()">
             <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                 <path d="M7 10l5 5 5-5z"/>
             </svg>
         </div>
 
-        <!-- Панель управления -->
         <div class="controls-panel">
             <div class="video-controls">
-                <!-- Предыдущее видео -->
                 <div class="control-btn" id="prevBtn" title="Предыдущее видео">
                     <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                         <path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/>
                     </svg>
                 </div>
-
-                <!-- Следующее видео -->
                 <div class="control-btn" id="nextBtn" title="Следующее видео">
                     <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                         <path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/>
                     </svg>
                 </div>
-
-                <!-- Управление звуком -->
                 <div class="volume-control">
                     <div class="control-btn" id="soundToggle" title="Вкл/Выкл звук">
                         <svg id="soundIcon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -591,7 +603,6 @@
             </div>
         </div>
 
-        <!-- Discord кнопка слева снизу -->
         <div class="discord-promo">
             <a href="https://discord.gg/ТВОЯ_ССЫЛКА_НА_ДИСКОРД" target="_blank" title="Join Discord">
                 <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -616,7 +627,7 @@
         </div>
     </section>
 
-    <!-- Модальное окно About - ПОЛНОЭКРАННАЯ КАРТИНКА -->
+    <!-- Модальное окно About -->
     <div id="aboutModal" class="modal">
         <div class="modal-content-fullscreen">
             <span class="close" id="closeAbout">&times;</span>
@@ -630,7 +641,6 @@
             <span class="close" id="closeSocials">&times;</span>
             <div class="socials-image-container">
                 <img src="socials.png" alt="Мои соцсети" class="socials-background">
-                <!-- Невидимые кликабельные области -->
                 <a href="https://youtube.com/@fleybi" target="_blank" class="social-hotspot youtube-hotspot"></a>
                 <a href="https://vk.com/fleybov" target="_blank" class="social-hotspot vk-hotspot"></a>
                 <a href="https://t.me/fleybi" target="_blank" class="social-hotspot telegram-hotspot"></a>
@@ -663,25 +673,19 @@
         const prevBtn = document.getElementById('prevBtn');
         const nextBtn = document.getElementById('nextBtn');
 
-        // Получаем индекс последнего видео из localStorage
         let currentVideoIndex = parseInt(localStorage.getItem('videoIndex') || '0');
-
-        // Музыка включена по умолчанию
         let isMuted = false;
 
-        // Функция для загрузки видео
         function loadVideo(index) {
             currentVideoIndex = index;
             bgVideo.src = videos[currentVideoIndex];
-            bgVideo.volume = 0.5; // Громкость 50% по умолчанию
-            bgVideo.muted = false; // Звук включен
-            
-            // Воспроизводим с обработкой ошибок
+            bgVideo.volume = 0.5;
+            bgVideo.muted = false;
+
             const playPromise = bgVideo.play();
             if (playPromise !== undefined) {
                 playPromise.catch(error => {
                     console.log('Autoplay prevented:', error);
-                    // Если браузер блокирует автовоспроизведение со звуком
                     bgVideo.muted = true;
                     isMuted = true;
                     volumeSlider.value = 0;
@@ -689,32 +693,24 @@
                     bgVideo.play();
                 });
             }
-            
-            // Сохраняем следующий индекс
+
             const nextIndex = (currentVideoIndex + 1) % videos.length;
             localStorage.setItem('videoIndex', nextIndex);
         }
 
-        // Загружаем текущее видео при старте
         loadVideo(currentVideoIndex);
 
-        // Кнопка "Следующее видео"
         nextBtn.addEventListener('click', () => {
-            const nextIndex = (currentVideoIndex + 1) % videos.length;
-            loadVideo(nextIndex);
+            loadVideo((currentVideoIndex + 1) % videos.length);
         });
 
-        // Кнопка "Предыдущее видео"
         prevBtn.addEventListener('click', () => {
-            const prevIndex = (currentVideoIndex - 1 + videos.length) % videos.length;
-            loadVideo(prevIndex);
+            loadVideo((currentVideoIndex - 1 + videos.length) % videos.length);
         });
 
-        // Управление звуком (вкл/выкл)
         soundToggle.addEventListener('click', () => {
             isMuted = !isMuted;
             bgVideo.muted = isMuted;
-            
             if (isMuted) {
                 volumeSlider.value = 0;
                 soundIcon.innerHTML = '<path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/>';
@@ -725,11 +721,9 @@
             }
         });
 
-        // Регулятор громкости
         volumeSlider.addEventListener('input', (e) => {
             const volume = e.target.value / 100;
             bgVideo.volume = volume;
-            
             if (volume === 0) {
                 bgVideo.muted = true;
                 isMuted = true;
@@ -748,21 +742,31 @@
         const socialsModal = document.getElementById('socialsModal');
         const closeAbout = document.getElementById('closeAbout');
         const closeSocials = document.getElementById('closeSocials');
-        <div style="
-    position: fixed;
-    top: 50%;
-    left: 20px;
-    transform: translateY(-50%);
-    z-index: 10;
-    background: rgba(0,0,0,0.6);
-    border: 1px solid rgba(255,255,255,0.2);
-    border-radius: 15px;
-    padding: 12px 16px;
-    text-align: center;
-    backdrop-filter: blur(10px);
-    font-family: 'Courier New', monospace;
-    color: #fff;
-">
-    <div style="font-size: 0.65rem; color: #aaa; margin-bottom: 4px;">ПОСЕТИТЕЛЕЙ</div>
-    <div style="font-size: 1.4rem; font-weight: bold;" id="ccounter"></div>
-</div>
+
+        aboutLink.addEventListener('click', () => aboutModal.classList.add('active'));
+        socialsLink.addEventListener('click', () => socialsModal.classList.add('active'));
+        closeAbout.addEventListener('click', () => aboutModal.classList.remove('active'));
+        closeSocials.addEventListener('click', () => socialsModal.classList.remove('active'));
+
+        aboutModal.addEventListener('click', (e) => {
+            if (e.target === aboutModal) aboutModal.classList.remove('active');
+        });
+        socialsModal.addEventListener('click', (e) => {
+            if (e.target === socialsModal) socialsModal.classList.remove('active');
+        });
+
+        // Счётчик посетителей
+        fetch('https://api.countapi.xyz/hit/fleybi.site/visits')
+            .then(r => r.json())
+            .then(data => {
+                document.getElementById('ccounter').textContent = data.value.toLocaleString();
+            })
+            .catch(() => {
+                // Если API недоступен — показываем локальный счётчик
+                let count = parseInt(localStorage.getItem('localVisits') || '0') + 1;
+                localStorage.setItem('localVisits', count);
+                document.getElementById('ccounter').textContent = count.toLocaleString();
+            });
+    </script>
+</body>
+</html>
