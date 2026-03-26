@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TTFHub Battle Pass</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --primary: #667eea;
+            --secondary: #764ba2;
+            --accent: #ff006e;
+            --success: #00d4ff;
+            --dark: #0a0a0a;
+            --light: #ffffff;
+            --border: rgba(255, 255, 255, 0.1);
+        }
+        html { scroll-behavior: smooth; }
+        body {
+            font-family: 'Courier New', monospace;
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 100%);
+            color: #fff;
+            min-height: 100vh;
+        }
+
+        /* ===== LOADING ===== */
+        #loadingScreen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #0a0a0a; display: flex; justify-content: center;
+            align-items: center; z-index: 9999; flex-direction: column; gap: 1rem;
+        }
+        #loadingScreen h2 {
+            font-size: 2rem; letter-spacing: 0.3rem;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+        }
+        .loader {
+            width: 40px; height: 40px;
+            border: 3px solid rgba(102, 126, 234, 0.2);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ===== AUTH ===== */
+        .auth-container {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.95); display: flex; justify-content: center;
+            align-items: center; z-index: 1000; backdrop-filter: blur(10px);
+            animation: fadeIn 0.5s ease-in;
+        }
+        .auth-container.hidden { display: none; }
+        .auth-box {
+            background: linear-gradient(135deg, rgba(102,126,234,0.1), rgba(118,75,162,0.1));
+            border: 1px solid var(--border); border-radius: 15px; padding: 3rem;
+            width: 90%; max-width: 400px; box-shadow: 0 0 60px rgba(102,126,234,0.3);
+        }
+        .auth-title {
+            font-size: 2.5rem; text-align: center; margin-bottom: 2rem;
+            letter-spacing: 0.2rem;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+        }
+        .auth-tabs {
+            display: flex; gap: 1rem; margin-bottom: 2rem;
+            border-bottom: 1px solid var(--border); padding-bottom: 1rem;
+        }
+        .auth-tab {
+            flex: 1; padding: 0.75rem; background: none; border: none;
+            color: rgba(255,255,255,0.5); cursor: pointer; font-size: 0.95rem;
+            letter-spacing: 0.1rem; transition: all 0.3s ease; font-family: 'Courier New', monospace;
+        }
+        .auth-tab.active { color: var(--primary); border-bottom: 2px solid var(--primary); margin-bottom: -1rem; }
+        .auth-form { display: none; }
+        .auth-form.active {
+            display: flex; flex-direction: column; gap: 1.5rem;
+            animation: fadeIn 0.3s ease-in;
+        }
+        .form-input {
+            background: rgba(255,255,255,0.05); border: 1px solid var(--border);
+            border-radius: 8px; padding: 0.75rem 1rem; color: #fff;
+            font-family: 'Courier New', monospace; transition: all 0.3s ease;
+        }
+        .form-input:focus {
+            outline: none; border-color: var(--primary);
+            background: rgba(102,126,234,0.1); box-shadow: 0 0 20px rgba(102,126,234,0.3);
+        }
+        .form-input::placeholder { color: rgba(255,255,255,0.3); }
+        .auth-btn {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border: none; color: #fff; padding: 0.75rem 1.5rem; border-radius: 8px;
+            cursor: pointer; font-size: 0.95rem; font-weight: 600; letter-spacing: 0.1rem;
+            transition: all 0.3s ease; font-family: 'Courier New', monospace;
+        }
+        .auth-btn:hover { transform: translateY(-2px); box-shadow: 0 10px 30px rgba(102,126,234,0.4); }
+        .auth-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+        .auth-error {
+            background: rgba(255,0,110,0.2); border: 1px solid var(--accent);
+            color: #ff006e; padding: 0.75rem; border-radius: 8px;
+            font-size: 0.85rem; text-align: center; display: none;
+        }
+        .auth-error.show { display: block; animation: shake 0.3s ease-in; }
+        .auth-success {
+            background: rgba(0,212,255,0.2); border: 1px solid var(--success);
+            color: var(--success); padding: 0.75rem; border-radius: 8px;
+            font-size: 0.85rem; text-align: center; display: none;
+        }
+        .auth-success.show { display: block; }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+
+        /* ===== MAIN APP ===== */
+        .main-app { display: none; padding: 2rem; max-width: 1400px; margin: 0 auto; }
+        .main-app.visible { display: block; animation: fadeIn 0.5s ease-in; }
+        .header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 3rem; padding-bottom: 1.5rem;
+            border-bottom: 1px solid var(--border); flex-wrap: wrap; gap: 1rem;
+        }
+        .header-title {
+            font-size: 2rem; letter-spacing: 0.2rem;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+        }
+        .user-info { display: flex; gap: 2rem; align-items: center; flex-wrap: wrap; }
+        .user-stats { display: flex; gap: 2rem; }
+        .stat { text-align: center; }
+        .stat-label { font-size: 0.85rem; color: rgba(255,255,255,0.6); letter-spacing: 0.1rem; margin-bottom: 0.5rem; }
+        .stat-value {
+            font-size: 1.8rem; font-weight: 600;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+        }
+        .logout-btn {
+            background: rgba(255,0,110,0.2); border: 1px solid var(--accent);
+            color: var(--accent); padding: 0.5rem 1rem; border-radius: 6px;
+            cursor: pointer; font-size: 0.85rem; transition: all 0.3s ease;
+        }
+        .logout-btn:hover { background: var(--accent); color: #000; }
+
+        /* ===== BATTLEPASS ===== */
+        .battlepass-section { margin-bottom: 3rem; }
+        .section-title {
+            font-size: 1.5rem; letter-spacing: 0.2rem; margin-bottom: 1.5rem;
+            color: var(--light); position: relative; padding-bottom: 1rem;
+            border-bottom: 2px solid var(--border);
+        }
+        .section-title::before { content: '⚔️'; margin-right: 0.75rem; }
+        .level-card {
+            background: linear-gradient(135deg, rgba(102,126,234,0.1), rgba(118,75,162,0.1));
+            border: 1px solid var(--border); border-radius: 12px; padding: 2rem;
+            margin-bottom: 2rem; box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+        .level-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
+        .level-info { display: flex; gap: 1.5rem; align-items: center; }
+        .level-badge {
+            width: 80px; height: 80px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            font-size: 2rem; box-shadow: 0 0 30px rgba(102,126,234,0.5);
+        }
+        .level-text h2 { font-size: 1.5rem; margin-bottom: 0.3rem; }
+        .level-text p { color: rgba(255,255,255,0.6); font-size: 0.9rem; }
+        .level-actions { display: flex; gap: 1rem; }
+        .action-btn {
+            background: rgba(255,255,255,0.1); border: 1px solid var(--border);
+            color: #fff; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer;
+            font-size: 0.85rem; transition: all 0.3s ease;
+        }
+        .action-btn:hover { background: var(--primary); border-color: var(--primary); transform: translateY(-2px); }
+        .progress-bar {
+            background: rgba(0,0,0,0.3); border: 1px solid var(--border);
+            border-radius: 8px; height: 12px; overflow: hidden; margin-bottom: 0.5rem;
+        }
+        .progress-fill {
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            height: 100%; transition: width 0.6s cubic-bezier(0.4,0,0.2,1);
+            box-shadow: 0 0 15px rgba(102,126,234,0.6);
+        }
+        .progress-text { display: flex; justify-content: space-between; font-size: 0.85rem; color: rgba(255,255,255,0.6); }
+        .rewards-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1.5rem; margin-top: 2rem; }
+        .reward-item {
+            background: rgba(0,0,0,0.3); border: 1px solid var(--border);
+            border-radius: 10px; padding: 1.5rem; text-align: center;
+            transition: all 0.3s ease; cursor: pointer; position: relative;
+        }
+        .reward-item:hover { border-color: var(--primary); transform: translateY(-5px); box-shadow: 0 10px 30px rgba(102,126,234,0.3); }
+        .reward-item.locked::before { content: '🔒'; position: absolute; top: 0.5rem; right: 0.5rem; }
+        .reward-icon { font-size: 2rem; margin-bottom: 0.75rem; }
+        .reward-name { font-size: 0.9rem; margin-bottom: 0.5rem; color: rgba(255,255,255,0.8); }
+        .reward-level { font-size: 0.75rem; color: var(--primary); letter-spacing: 0.1rem; }
+        .reward-item.unlocked { background: rgba(102,126,234,0.2); border-color: var(--primary); }
+
+        /* ===== TASKS ===== */
+        .tasks-section { margin-bottom: 3rem; }
+        .section-title.tasks::before { content: '📋'; }
+        .tasks-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; }
+        .task-card {
+            background: rgba(0,0,0,0.3); border: 1px solid var(--border);
+            border-radius: 10px; padding: 1.5rem; transition: all 0.3s ease;
+        }
+        .task-card:hover { border-color: var(--success); box-shadow: 0 10px 30px rgba(0,212,255,0.2); }
+        .task-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem; }
+        .task-name { font-size: 1rem; font-weight: 600; }
+        .task-status { font-size: 0.7rem; padding: 0.3rem 0.6rem; border-radius: 4px; letter-spacing: 0.1rem; }
+        .task-status.completed { background: rgba(0,212,255,0.2); color: var(--success); }
+        .task-status.active { background: rgba(102,126,234,0.2); color: var(--primary); }
+        .task-description { color: rgba(255,255,255,0.6); font-size: 0.85rem; margin-bottom: 1.5rem; }
+        .task-progress { margin-bottom: 1rem; }
+        .task-rewards { display: flex; gap: 1rem; padding-top: 1rem; border-top: 1px solid var(--border); margin-top: 1rem; }
+        .reward-badge { display: flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; background: rgba(255,255,255,0.05); padding: 0.4rem 0.8rem; border-radius: 6px; }
+        .claim-btn {
+            width: 100%; background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border: none; color: #fff; padding: 0.75rem; border-radius: 6px;
+            cursor: pointer; font-size: 0.85rem; font-weight: 600; transition: all 0.3s ease; margin-top: 1rem;
+        }
+        .claim-btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 10px 25px rgba(102,126,234,0.4); }
+        .claim-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        /* ===== SHOP ===== */
+        .shop-section { margin-bottom: 3rem; }
+        .section-title.shop::before { content: '🛍️'; }
+        .shop-filters { display: flex; gap: 1rem; margin-bottom: 2rem; flex-wrap: wrap; }
+        .filter-btn {
+            background: rgba(255,255,255,0.1); border: 1px solid var(--border); color: #fff;
+            padding: 0.5rem 1.25rem; border-radius: 20px; cursor: pointer;
+            font-size: 0.85rem; transition: all 0.3s ease; font-family: 'Courier New', monospace;
+        }
+        .filter-btn.active { background: var(--primary); border-color: var(--primary); }
+        .shop-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1.5rem; }
+        .shop-item {
+            background: rgba(0,0,0,0.3); border: 1px solid var(--border);
+            border-radius: 10px; padding: 1.5rem; text-align: center; transition: all 0.3s ease;
+        }
+        .shop-item:hover { border-color: var(--accent); box-shadow: 0 10px 30px rgba(255,0,110,0.2); transform: translateY(-5px); }
+        .shop-icon { font-size: 2.5rem; margin-bottom: 1rem; }
+        .shop-name { font-size: 1rem; font-weight: 600; margin-bottom: 0.5rem; }
+        .shop-description { font-size: 0.75rem; color: rgba(255,255,255,0.5); margin-bottom: 1rem; min-height: 2rem; }
+        .shop-price { display: flex; align-items: center; justify-content: center; gap: 0.5rem; font-size: 1.2rem; font-weight: 600; margin-bottom: 1rem; color: var(--accent); }
+        .shop-btn {
+            width: 100%; background: linear-gradient(135deg, var(--accent), #ff1744);
+            border: none; color: #fff; padding: 0.75rem; border-radius: 6px;
+            cursor: pointer; font-size: 0.85rem; font-weight: 600; transition: all 0.3s ease;
+        }
+        .shop-btn:hover { transform: translateY(-2px); box-shadow: 0 10px 25px rgba(255,0,110,0.4); }
+
+        /* ===== MODAL ===== */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 500; justify-content: center; align-items: center; backdrop-filter: blur(10px); }
+        .modal.active { display: flex; animation: fadeIn 0.3s ease-in; }
+        .modal-content {
+            background: linear-gradient(135deg, rgba(102,126,234,0.1), rgba(118,75,162,0.1));
+            border: 1px solid var(--border); border-radius: 12px; padding: 2rem;
+            width: 90%; max-width: 500px; box-shadow: 0 0 60px rgba(102,126,234,0.3);
+        }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
+        .modal-title { font-size: 1.5rem; letter-spacing: 0.1rem; }
+        .close-modal { background: none; border: none; color: #fff; font-size: 1.5rem; cursor: pointer; }
+
+        /* ===== NOTIFICATION ===== */
+        .notification {
+            position: fixed; bottom: 2rem; right: 2rem;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: #fff; padding: 1.5rem 2rem; border-radius: 8px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5); animation: slideIn 0.4s ease-in;
+            z-index: 600; max-width: 300px;
+        }
+
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideIn { from { transform: translateX(400px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+        @media (max-width: 768px) {
+            .header { flex-direction: column; text-align: center; }
+            .user-info { flex-direction: column; width: 100%; }
+            .user-stats { width: 100%; justify-content: space-around; }
+            .tasks-grid { grid-template-columns: 1fr; }
+            .shop-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+            .auth-box { padding: 2rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- LOADING -->
+    <div id="loadingScreen">
+        <h2>BATTLE PASS</h2>
+        <div class="loader"></div>
+    </div>
+
+    <!-- AUTH -->
+    <div class="auth-container hidden" id="authContainer">
+        <div class="auth-box">
+            <h1 class="auth-title">BATTLE PASS</h1>
+            <div class="auth-tabs">
+                <button class="auth-tab active" onclick="switchTab('login', event)">Вход</button>
+                <button class="auth-tab" onclick="switchTab('register', event)">Регистрация</button>
+            </div>
+            <div class="auth-error" id="authError"></div>
+            <div class="auth-success" id="authSuccess"></div>
+
+            <!-- ВХОД -->
+            <div class="auth-form active" id="loginForm">
+                <input type="email" class="form-input" placeholder="Email" id="loginEmail" required>
+                <input type="password" class="form-input" placeholder="Пароль" id="loginPassword" required>
+                <button class="auth-btn" id="loginBtn" onclick="handleLogin()">ВОЙТИ</button>
+            </div>
+
+            <!-- РЕГИСТРАЦИЯ -->
+            <div class="auth-form" id="registerForm">
+                <input type="text" class="form-input" placeholder="Ник (отображается в игре)" id="registerUsername" required>
+                <input type="email" class="form-input" placeholder="Email" id="registerEmail" required>
+                <input type="password" class="form-input" placeholder="Пароль (мин. 6 символов)" id="registerPassword" required>
+                <input type="password" class="form-input" placeholder="Подтверди пароль" id="registerPasswordConfirm" required>
+                <button class="auth-btn" id="registerBtn" onclick="handleRegister()">СОЗДАТЬ АККАУНТ</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN APP -->
+    <div class="main-app" id="mainApp">
+        <div class="header">
+            <h1 class="header-title">TTFHub Battle Pass</h1>
+            <div class="user-info">
+                <div class="user-stats">
+                    <div class="stat">
+                        <div class="stat-label">Уровень</div>
+                        <div class="stat-value" id="userLevel">1</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-label">XP</div>
+                        <div class="stat-value" id="userXP">0</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-label">Coins</div>
+                        <div class="stat-value" id="userCoins">0</div>
+                    </div>
+                </div>
+                <div>
+                    <div style="margin-bottom: 0.5rem; font-size: 0.9rem;">👤 <span id="userName">Player</span></div>
+                    <button class="logout-btn" onclick="logout()">Выход</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- БАТЛПАС -->
+        <div class="battlepass-section">
+            <h2 class="section-title">Батлпас Сезон 1</h2>
+            <div class="level-card">
+                <div class="level-header">
+                    <div class="level-info">
+                        <div class="level-badge" id="levelBadge">⭐</div>
+                        <div class="level-text">
+                            <h2>Уровень <span id="currentLevel">1</span></h2>
+                            <p>Продвигайся вверх, открывая награды</p>
+                        </div>
+                    </div>
+                    <div class="level-actions">
+                        <button class="action-btn" onclick="addXP(50)">+50 XP</button>
+                        <button class="action-btn" onclick="addCoins(20)">+20 💰</button>
+                    </div>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+                </div>
+                <div class="progress-text">
+                    <span id="xpText">0 / 500 XP</span>
+                    <span id="progressPercent">0%</span>
+                </div>
+                <div class="rewards-grid" id="rewardsGrid"></div>
+            </div>
+        </div>
+
+        <!-- ЗАДАНИЯ -->
+        <div class="tasks-section">
+            <h2 class="section-title tasks">Задания</h2>
+            <div class="tasks-grid" id="tasksGrid"></div>
+        </div>
+
+        <!-- МАГАЗИН -->
+        <div class="shop-section">
+            <h2 class="section-title shop">Магазин</h2>
+            <div class="shop-filters" id="shopFilters"></div>
+            <div class="shop-grid" id="shopGrid"></div>
+        </div>
+    </div>
+
+    <!-- MODAL -->
+    <div class="modal" id="purchaseModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Подтверждение покупки</h2>
+                <button class="close-modal" onclick="closePurchaseModal()">✕</button>
+            </div>
+            <div id="purchaseDetails"></div>
+        </div>
+    </div>
+
+    <script>
+        // ===== SUPABASE INIT =====
+        const SUPABASE_URL = 'https://ozgrmhowxhojxtqbhbtz.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im96Z3JtaG93eGhvanh0cWJoYnR6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ1NDYwNjMsImV4cCI6MjA5MDEyMjA2M30.Cf8OMf6bJ8u0OhBw-4NOj5jr7dfHBkjjX9WtM4fBrGQ';
+        const { createClient } = supabase;
+        const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        let currentUserData = null;
+
+        // ===== GAME CONFIG =====
+        const gameConfig = {
+            levels: 100,
+            xpPerLevel: 500,
+            tasks: [
+                { id: 1, name: 'Приветствие', desc: 'Зайди в систему', xp: 50, coins: 20 },
+                { id: 2, name: 'Охотник XP', desc: 'Получи 100 XP за сессию', xp: 100, coins: 50 },
+                { id: 3, name: 'Торговец', desc: 'Потрати 500 Coins в магазине', xp: 150, coins: 100 },
+                { id: 4, name: 'Коллекционер', desc: 'Открой 5 уровней', xp: 200, coins: 80 },
+                { id: 5, name: 'VIP Member', desc: 'Купи VIP роль', xp: 300, coins: 150 },
+                { id: 6, name: 'Легенда', desc: 'Достигни уровня 50', xp: 500, coins: 200 },
+            ],
+            shopItems: [
+                { id: 1, name: 'VIP Роль', icon: '👑', desc: 'Эксклюзивная роль в Discord', price: 500, category: 'roles' },
+                { id: 2, name: 'Elite Роль', icon: '💎', desc: 'Премиум статус в клане', price: 1000, category: 'roles' },
+                { id: 3, name: 'Закрытый Чат', icon: '🔒', desc: 'Приватный канал VIP', price: 300, category: 'access' },
+                { id: 4, name: 'Приватные Игры', icon: '🎮', desc: 'Закрытые игровые сеансы', price: 700, category: 'access' },
+                { id: 5, name: 'Цвет Ника', icon: '🎨', desc: 'Кастомизируй ник цветом', price: 200, category: 'cosmetics' },
+                { id: 6, name: 'Рамка Профиля', icon: '🖼️', desc: 'Красивая рамка вокруг профиля', price: 400, category: 'cosmetics' },
+                { id: 7, name: 'Значки', icon: '🏅', desc: 'Эксклюзивные значки', price: 150, category: 'cosmetics' },
+                { id: 8, name: 'x2 XP Буст', icon: '⚡', desc: 'Двойной опыт на 24 часа', price: 400, category: 'boosters' },
+                { id: 9, name: 'Буст Батлпаса', icon: '🚀', desc: 'Ускори прогресс батлпаса', price: 800, category: 'boosters' },
+                { id: 10, name: 'Донат скидка', icon: '💳', desc: '10% скидка на Фантайм', price: 250, category: 'access' },
+            ]
+        };
+
+        // ===== INIT =====
+        async function init() {
+            const { data: { session } } = await sb.auth.getSession();
+            if (session) {
+                await loadUserProfile(session.user);
+            } else {
+                showAuth();
+            }
+            document.getElementById('loadingScreen').style.display = 'none';
+        }
+
+        async function loadUserProfile(authUser) {
+            const { data, error } = await sb
+                .from('profiles')
+                .select('*')
+                .eq('id', authUser.id)
+                .single();
+
+            if (error || !data) {
+                // профиль ещё не создан — создаём
+                const newProfile = {
+                    id: authUser.id,
+                    username: authUser.user_metadata?.username || authUser.email.split('@')[0],
+                    level: 1,
+                    xp: 0,
+                    coins: 0,
+                    total_xp: 0,
+                    tasks_completed: [],
+                    purchases: [],
+                    inventory: []
+                };
+                await sb.from('profiles').insert(newProfile);
+                currentUserData = newProfile;
+            } else {
+                currentUserData = data;
+            }
+            showApp();
+        }
+
+        // ===== AUTH =====
+        function switchTab(tab, event) {
+            document.querySelectorAll('.auth-form').forEach(f => f.classList.remove('active'));
+            document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
+            document.getElementById(tab + 'Form').classList.add('active');
+            event.target.classList.add('active');
+            clearMessages();
+        }
+
+        async function handleLogin() {
+            const email = document.getElementById('loginEmail').value.trim();
+            const password = document.getElementById('loginPassword').value;
+            if (!email || !password) { showError('Заполни все поля'); return; }
+
+            const btn = document.getElementById('loginBtn');
+            btn.disabled = true;
+            btn.textContent = 'ВХОДИМ...';
+
+            const { data, error } = await sb.auth.signInWithPassword({ email, password });
+
+            if (error) {
+                showError('Неверный email или пароль');
+                btn.disabled = false;
+                btn.textContent = 'ВОЙТИ';
+                return;
+            }
+
+            await loadUserProfile(data.user);
+        }
+
+        async function handleRegister() {
+            const username = document.getElementById('registerUsername').value.trim();
+            const email = document.getElementById('registerEmail').value.trim();
+            const password = document.getElementById('registerPassword').value;
+            const confirm = document.getElementById('registerPasswordConfirm').value;
+
+            if (!username || !email || !password) { showError('Заполни все поля'); return; }
+            if (username.length < 3) { showError('Ник минимум 3 символа'); return; }
+            if (password.length < 6) { showError('Пароль минимум 6 символов'); return; }
+            if (password !== confirm) { showError('Пароли не совпадают'); return; }
+
+            const btn = document.getElementById('registerBtn');
+            btn.disabled = true;
+            btn.textContent = 'СОЗДАЁМ...';
+
+            // Проверяем уникальность ника
+            const { data: existing } = await sb
+                .from('profiles')
+                .select('id')
+                .eq('username', username)
+                .single();
+
+            if (existing) {
+                showError('Ник уже занят, выбери другой');
+                btn.disabled = false;
+                btn.textContent = 'СОЗДАТЬ АККАУНТ';
+                return;
+            }
+
+            const { data, error } = await sb.auth.signUp({
+                email,
+                password,
+                options: { data: { username } }
+            });
+
+            if (error) {
+                showError(error.message === 'User already registered' ? 'Email уже занят' : 'Ошибка регистрации');
+                btn.disabled = false;
+                btn.textContent = 'СОЗДАТЬ АККАУНТ';
+                return;
+            }
+
+            if (data.user) {
+                await loadUserProfile(data.user);
+            } else {
+                showSuccess('✅ Проверь почту для подтверждения!');
+                btn.disabled = false;
+                btn.textContent = 'СОЗДАТЬ АККАУНТ';
+            }
+        }
+
+        async function logout() {
+            if (confirm('Выйти из аккаунта?')) {
+                await sb.auth.signOut();
+                currentUserData = null;
+                document.getElementById('mainApp').classList.remove('visible');
+                showAuth();
+            }
+        }
+
+        // ===== UI =====
+        function showAuth() {
+            document.getElementById('authContainer').classList.remove('hidden');
+            document.getElementById('mainApp').classList.remove('visible');
+        }
+
+        function showApp() {
+            document.getElementById('authContainer').classList.add('hidden');
+            document.getElementById('mainApp').classList.add('visible');
+            renderUI();
+        }
+
+        function showError(msg) {
+            const el = document.getElementById('authError');
+            el.textContent = msg;
+            el.classList.add('show');
+            document.getElementById('authSuccess').classList.remove('show');
+        }
+
+        function showSuccess(msg) {
+            const el = document.getElementById('authSuccess');
+            el.textContent = msg;
+            el.classList.add('show');
+            document.getElementById('authError').classList.remove('show');
+        }
+
+        function clearMessages() {
+            document.getElementById('authError').classList.remove('show');
+            document.getElementById('authSuccess').classList.remove('show');
+        }
+
+        // ===== GAME LOGIC =====
+        async function saveProfile() {
+            const { error } = await sb
+                .from('profiles')
+                .update({
+                    level: currentUserData.level,
+                    xp: currentUserData.xp,
+                    coins: currentUserData.coins,
+                    total_xp: currentUserData.total_xp,
+                    tasks_completed: currentUserData.tasks_completed,
+                    purchases: currentUserData.purchases,
+                    inventory: currentUserData.inventory
+                })
+                .eq('id', currentUserData.id);
+
+            if (error) console.error('Ошибка сохранения:', error);
+            renderUI();
+        }
+
+        async function addXP(amount) {
+            const dailyMax = 300;
+            const dailyKey = 'xpDaily_' + new Date().toDateString() + '_' + currentUserData.id;
+            const dailyXP = parseInt(localStorage.getItem(dailyKey) || '0');
+
+            if (dailyXP >= dailyMax) {
+                showNotification('⚠️ Лимит XP на день исчерпан!');
+                return;
+            }
+
+            const xpToAdd = Math.min(amount, dailyMax - dailyXP);
+            currentUserData.xp += xpToAdd;
+            currentUserData.total_xp += xpToAdd;
+
+            while (currentUserData.xp >= gameConfig.xpPerLevel && currentUserData.level < gameConfig.levels) {
+                currentUserData.xp -= gameConfig.xpPerLevel;
+                currentUserData.level++;
+                showNotification(`🎉 Уровень ${currentUserData.level} разблокирован!`);
+            }
+
+            localStorage.setItem(dailyKey, dailyXP + xpToAdd);
+            await saveProfile();
+        }
+
+        async function addCoins(amount) {
+            const dailyMax = 200;
+            const dailyKey = 'coinsDaily_' + new Date().toDateString() + '_' + currentUserData.id;
+            const dailyCoins = parseInt(localStorage.getItem(dailyKey) || '0');
+
+            if (dailyCoins >= dailyMax) {
+                showNotification('⚠️ Лимит Coins на день исчерпан!');
+                return;
+            }
+
+            const coinsToAdd = Math.min(amount, dailyMax - dailyCoins);
+            currentUserData.coins += coinsToAdd;
+            localStorage.setItem(dailyKey, dailyCoins + coinsToAdd);
+            await saveProfile();
+        }
+
+        async function completeTask(taskId) {
+            if (!currentUserData.tasks_completed) currentUserData.tasks_completed = [];
+            if (currentUserData.tasks_completed.includes(taskId)) return;
+
+            const task = gameConfig.tasks.find(t => t.id === taskId);
+            currentUserData.tasks_completed.push(taskId);
+            await addXP(task.xp);
+            await addCoins(task.coins);
+            showNotification(`✅ Задание выполнено! +${task.xp} XP +${task.coins} Coins`);
+        }
+
+        async function buyItem(itemId) {
+            const item = gameConfig.shopItems.find(i => i.id === itemId);
+            if (!item) return;
+            if (currentUserData.coins < item.price) {
+                showNotification('❌ Недостаточно Coins!');
+                return;
+            }
+
+            showPurchaseModal(item, async () => {
+                currentUserData.coins -= item.price;
+                if (!currentUserData.inventory) currentUserData.inventory = [];
+                if (!currentUserData.purchases) currentUserData.purchases = [];
+                currentUserData.inventory.push({ id: item.id, name: item.name, purchasedAt: Date.now() });
+                currentUserData.purchases.push(item.id);
+                await saveProfile();
+                showNotification(`✅ Куплено: ${item.name}`);
+                closePurchaseModal();
+            });
+        }
+
+        // ===== RENDER =====
+        function renderUI() {
+            if (!currentUserData) return;
+            document.getElementById('userName').textContent = currentUserData.username;
+            document.getElementById('userLevel').textContent = currentUserData.level;
+            document.getElementById('userXP').textContent = (currentUserData.total_xp || 0).toLocaleString();
+            document.getElementById('userCoins').textContent = currentUserData.coins;
+            document.getElementById('currentLevel').textContent = currentUserData.level;
+            document.getElementById('levelBadge').textContent = ['⭐','🌟','💫','✨','🔥'][currentUserData.level % 5];
+
+            const percent = (currentUserData.xp / gameConfig.xpPerLevel) * 100;
+            document.getElementById('progressFill').style.width = percent + '%';
+            document.getElementById('xpText').textContent = `${currentUserData.xp} / ${gameConfig.xpPerLevel} XP`;
+            document.getElementById('progressPercent').textContent = Math.round(percent) + '%';
+
+            renderRewards();
+            renderTasks();
+            renderShop();
+        }
+
+        function renderRewards() {
+            const rewards = [
+                { level: 1, icon: '🎁', name: '100 Coins' },
+                { level: 5, icon: '🏅', name: 'Значок' },
+                { level: 10, icon: '👑', name: 'VIP Роль' },
+                { level: 25, icon: '💎', name: 'Elite Роль' },
+                { level: 50, icon: '🚀', name: 'Буст 2x XP' },
+                { level: 100, icon: '👿', name: 'Легенда' },
+            ];
+            document.getElementById('rewardsGrid').innerHTML = rewards.map(r => `
+                <div class="reward-item ${currentUserData.level >= r.level ? 'unlocked' : 'locked'}">
+                    <div class="reward-icon">${r.icon}</div>
+                    <div class="reward-name">${r.name}</div>
+                    <div class="reward-level">УР. ${r.level}</div>
+                </div>
+            `).join('');
+        }
+
+        function renderTasks() {
+            const completed = currentUserData.tasks_completed || [];
+            document.getElementById('tasksGrid').innerHTML = gameConfig.tasks.map(task => `
+                <div class="task-card">
+                    <div class="task-header">
+                        <div class="task-name">${task.name}</div>
+                        <div class="task-status ${completed.includes(task.id) ? 'completed' : 'active'}">
+                            ${completed.includes(task.id) ? '✓ Выполнено' : 'АКТИВНО'}
+                        </div>
+                    </div>
+                    <div class="task-description">${task.desc}</div>
+                    <div class="task-rewards">
+                        <div class="reward-badge">⭐ ${task.xp} XP</div>
+                        <div class="reward-badge">💰 ${task.coins} Coins</div>
+                    </div>
+                    <button class="claim-btn" ${completed.includes(task.id) ? 'disabled' : ''} onclick="completeTask(${task.id})">
+                        ${completed.includes(task.id) ? 'ВЫПОЛНЕНО' : 'ВЫПОЛНИТЬ'}
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        function renderShop(category = 'roles') {
+            const cats = ['roles','access','cosmetics','boosters'];
+            document.getElementById('shopFilters').innerHTML = cats.map(cat => `
+                <button class="filter-btn ${cat === category ? 'active' : ''}" onclick="renderShop('${cat}')">
+                    ${{ roles:'👑 Роли', access:'🔓 Доступы', cosmetics:'🎨 Визуал', boosters:'⚡ Бусты' }[cat]}
+                </button>
+            `).join('');
+
+            document.getElementById('shopGrid').innerHTML = gameConfig.shopItems
+                .filter(i => i.category === category)
+                .map(item => `
+                    <div class="shop-item">
+                        <div class="shop-icon">${item.icon}</div>
+                        <div class="shop-name">${item.name}</div>
+                        <div class="shop-description">${item.desc}</div>
+                        <div class="shop-price">💰 ${item.price}</div>
+                        <button class="shop-btn" onclick="buyItem(${item.id})">КУПИТЬ</button>
+                    </div>
+                `).join('');
+        }
+
+        function showPurchaseModal(item, onConfirm) {
+            const modal = document.getElementById('purchaseModal');
+            document.getElementById('purchaseDetails').innerHTML = `
+                <div style="text-align:center;padding:1.5rem 0;">
+                    <div style="font-size:3rem;margin-bottom:1rem;">${item.icon}</div>
+                    <h3 style="font-size:1.3rem;margin-bottom:0.5rem;">${item.name}</h3>
+                    <p style="color:rgba(255,255,255,0.6);margin-bottom:1.5rem;">${item.desc}</p>
+                    <div style="background:rgba(255,0,110,0.2);border:1px solid #ff006e;padding:1rem;border-radius:8px;margin-bottom:2rem;">
+                        <div style="font-size:0.9rem;color:rgba(255,255,255,0.6);">СТОИМОСТЬ</div>
+                        <div style="font-size:2rem;font-weight:600;color:#ff006e;">💰 ${item.price} Coins</div>
+                    </div>
+                    <div style="display:flex;gap:1rem;">
+                        <button class="auth-btn" style="flex:1;" id="confirmPurchaseBtn">ПОДТВЕРДИТЬ</button>
+                        <button class="auth-btn" style="flex:1;background:rgba(255,255,255,0.1);" onclick="closePurchaseModal()">ОТМЕНА</button>
+                    </div>
+                </div>
+            `;
+            document.getElementById('confirmPurchaseBtn').onclick = onConfirm;
+            modal.classList.add('active');
+        }
+
+        function closePurchaseModal() {
+            document.getElementById('purchaseModal').classList.remove('active');
+        }
+
+        function showNotification(msg) {
+            const notif = document.createElement('div');
+            notif.className = 'notification';
+            notif.textContent = msg;
+            document.body.appendChild(notif);
+            setTimeout(() => notif.remove(), 3000);
+        }
+
+        // START
+        init();
+    </script>
+</body>
+</html>
