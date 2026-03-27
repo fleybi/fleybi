@@ -800,8 +800,7 @@ async function loadTasks() {
 
     checkSession();
 </script> 
-    // ===== SHOP =====
-let editableShop = [];
+    let editableShop = [];
 
 const defaultShop = [
     { id:'s1', icon:'💎', name:'VIP', desc:'VIP доступ', price:500 },
@@ -810,70 +809,36 @@ const defaultShop = [
 
 async function loadShop() {
     try {
-        const { data } = await sb
-            .from('site_config')
-            .select('value')
-            .eq('key', 'shop')
-            .single();
-
-        if (data && data.value) {
-            editableShop = typeof data.value === 'string'
-                ? JSON.parse(data.value)
-                : data.value;
-        } else {
-            editableShop = defaultShop;
-        }
-
-    } catch (e) {
-        console.log(e);
-        editableShop = defaultShop;
+        const { data } = await sb.from('site_config').select('value').eq('key', 'shop').single();
+        editableShop = data?.value ? (typeof data.value === 'string' ? JSON.parse(data.value) : data.value) : defaultShop.slice();
+    } catch(e) {
+        console.log('shop load error', e);
+        editableShop = defaultShop.slice();
     }
-
     renderShopEditor();
 }
 
 function renderShopEditor() {
     const el = document.getElementById('shopEditor');
-    if (!el) return;
+    if(!el) return;
+    if(!editableShop.length) { el.innerHTML='<div class="empty-state">Нет наград</div>'; return; }
 
     el.innerHTML = editableShop.map((item,i)=>`
         <div class="task-edit-card">
             <div class="task-edit-row">
                 <div class="task-edit-fields">
-
-                    <input class="edit-input"
-                        value="${item.icon}"
-                        onchange="editableShop[${i}].icon=this.value">
-
-                    <input class="edit-input"
-                        value="${item.name}"
-                        onchange="editableShop[${i}].name=this.value">
-
-                    <input class="edit-input full"
-                        value="${item.desc}"
-                        onchange="editableShop[${i}].desc=this.value">
-
-                    <input class="edit-input"
-                        type="number"
-                        value="${item.price}"
-                        onchange="editableShop[${i}].price=parseInt(this.value)||0">
-
+                    <input class="edit-input" value="${item.icon}" onchange="editableShop[${i}].icon=this.value">
+                    <input class="edit-input" value="${item.name}" onchange="editableShop[${i}].name=this.value">
+                    <input class="edit-input full" value="${item.desc}" onchange="editableShop[${i}].desc=this.value">
+                    <input class="edit-input" type="number" value="${item.price || 0}" onchange="editableShop[${i}].price=parseInt(this.value)||0">
                 </div>
-
                 <button class="btn-del" onclick="deleteShopItem(${i})">🗑️</button>
             </div>
-        </div>
-    `).join('');
+        </div>`).join('');
 }
 
 function addShopItem() {
-    editableShop.push({
-        id:'s'+Date.now(),
-        icon:'🎁',
-        name:'Награда',
-        desc:'Описание',
-        price:100
-    });
+    editableShop.push({ id:'s'+Date.now(), icon:'🎁', name:'Награда', desc:'Описание', price:100 });
     renderShopEditor();
 }
 
@@ -883,17 +848,8 @@ function deleteShopItem(i) {
 }
 
 async function saveShop() {
-    const { error } = await sb.from('site_config').upsert(
-        { key:'shop', value: editableShop },
-        { onConflict:'key' }
-    );
-
-    if (error) {
-        console.log(error);
-        showToast('❌ Ошибка');
-        return;
-    }
-
+    const { error } = await sb.from('site_config').upsert({ key:'shop', value: editableShop }, { onConflict:'key' });
+    if(error) { console.log(error); showToast('❌ Ошибка'); return; }
     showToast('✅ Магазин сохранён');
 }
 </body>
