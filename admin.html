@@ -607,15 +607,41 @@
     }
 
     // ===== TASKS EDITOR =====
-    async function loadTasks() {
-        try {
-            const { data } = await sb.from('site_config').select('value').eq('key', 'tasks').single();
-            editableTasks = data?.value ? [...data.value] : [...defaultTasks];
-        } catch(e) {
+  async function loadTasks() {
+    try {
+        const { data } = await sb
+            .from('site_config')
+            .select('value')
+            .eq('key', 'tasks')
+            .single();
+
+        if (data?.value) {
+            const parsed = typeof data.value === 'string'
+                ? JSON.parse(data.value)
+                : data.value;
+
+            if (Array.isArray(parsed)) {
+                editableTasks = parsed.map((t, i) => ({
+                    id: t?.id || `task_${i}`,
+                    icon: t?.icon || '🎯',
+                    name: t?.name || '',
+                    desc: t?.desc || '',
+                    xp: Number(t?.xp) || 0,
+                    coins: Number(t?.coins) || 0
+                }));
+            } else {
+                editableTasks = [...defaultTasks];
+            }
+        } else {
             editableTasks = [...defaultTasks];
         }
-        renderTasksEditor();
+    } catch (e) {
+        console.log('tasks load error', e);
+        editableTasks = [...defaultTasks];
     }
+
+    renderTasksEditor();
+}
 
     function renderTasksEditor() {
         document.getElementById('tasksEditor').innerHTML = editableTasks.map((t, i) => `
