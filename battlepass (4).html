@@ -1,0 +1,843 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TTFHub — Клановая Система</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Syne:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --bg:#07070f;--surface:#0e0e1c;--surface2:#13131f;--border:rgba(255,255,255,0.07);
+  --primary:#7c5cfc;--primary2:#a78bfa;--accent:#fc5c7d;--gold:#f5c518;
+  --cyan:#00e5ff;--green:#00e676;--text:#e8e8f0;--sub:#6b6b8a;
+}
+html{scroll-behavior:smooth;}
+body{font-family:'Syne',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
+body::before{content:'';position:fixed;inset:0;
+  background:radial-gradient(ellipse 60% 40% at 10% 0%,rgba(124,92,252,.07) 0%,transparent 70%),
+    radial-gradient(ellipse 40% 60% at 90% 100%,rgba(252,92,125,.05) 0%,transparent 70%);
+  pointer-events:none;z-index:0;}
+
+/* LOADING */
+#loadingScreen{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1.5rem;z-index:9999;}
+#loadingScreen .logo{font-family:'Orbitron',sans-serif;font-size:2rem;font-weight:900;letter-spacing:.4rem;background:linear-gradient(135deg,var(--primary),var(--accent));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.loader-ring{width:40px;height:40px;border-radius:50%;border:2px solid rgba(124,92,252,.15);border-top-color:var(--primary);animation:spin .8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+/* AUTH */
+.auth-overlay{position:fixed;inset:0;background:rgba(0,0,0,.95);display:flex;align-items:center;justify-content:center;z-index:1000;backdrop-filter:blur(20px);}
+.auth-overlay.hidden{display:none;}
+.auth-box{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:2.5rem;width:90%;max-width:380px;box-shadow:0 0 80px rgba(124,92,252,.15);}
+.auth-logo{font-family:'Orbitron',sans-serif;font-size:1.8rem;font-weight:900;letter-spacing:.3rem;text-align:center;margin-bottom:.3rem;background:linear-gradient(135deg,var(--primary),var(--accent));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.auth-sub{text-align:center;color:var(--sub);font-size:.82rem;margin-bottom:2rem;letter-spacing:.05rem;}
+.auth-tabs{display:flex;background:rgba(255,255,255,.03);border-radius:10px;padding:4px;margin-bottom:1.5rem;}
+.auth-tab{flex:1;padding:.55rem;border:none;background:none;color:var(--sub);cursor:pointer;font-family:'Syne',sans-serif;font-size:.85rem;border-radius:7px;transition:all .3s;}
+.auth-tab.active{background:rgba(124,92,252,.2);color:var(--primary2);}
+.auth-form{display:none;flex-direction:column;gap:.85rem;}
+.auth-form.active{display:flex;animation:fadeUp .3s ease;}
+.inp{background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:10px;padding:.75rem 1rem;color:var(--text);font-family:'Syne',sans-serif;font-size:.88rem;transition:all .3s;}
+.inp:focus{outline:none;border-color:rgba(124,92,252,.5);background:rgba(124,92,252,.06);}
+.inp::placeholder{color:var(--sub);}
+.auth-btn-main{background:linear-gradient(135deg,var(--primary),var(--accent));border:none;color:#fff;padding:.8rem;border-radius:10px;cursor:pointer;font-family:'Orbitron',sans-serif;font-size:.85rem;font-weight:700;letter-spacing:.1rem;transition:all .3s;}
+.auth-btn-main:hover{transform:translateY(-2px);box-shadow:0 8px 30px rgba(124,92,252,.4);}
+.auth-btn-main:disabled{opacity:.5;cursor:not-allowed;transform:none;}
+.auth-msg{padding:.6rem;border-radius:8px;font-size:.82rem;text-align:center;display:none;}
+.auth-msg.err{background:rgba(252,92,125,.1);border:1px solid rgba(252,92,125,.3);color:var(--accent);display:block;}
+.auth-msg.ok{background:rgba(0,230,118,.1);border:1px solid rgba(0,230,118,.3);color:var(--green);display:block;}
+
+/* LAYOUT */
+.app{display:none;}
+.app.visible{display:flex;min-height:100vh;}
+
+/* SIDEBAR */
+.sidebar{width:240px;min-height:100vh;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;left:0;top:0;bottom:0;z-index:50;transition:transform .3s ease;}
+.sidebar-logo{padding:1.5rem 1.25rem 1rem;border-bottom:1px solid var(--border);}
+.sidebar-logo .logo-text{font-family:'Orbitron',sans-serif;font-size:1.1rem;font-weight:900;letter-spacing:.2rem;background:linear-gradient(135deg,var(--primary),var(--accent));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.sidebar-logo .logo-sub{font-size:.7rem;color:var(--sub);letter-spacing:.08rem;margin-top:.2rem;}
+.user-panel{padding:1rem 1.25rem;border-bottom:1px solid var(--border);}
+.user-avatar{width:42px;height:42px;border-radius:12px;background:linear-gradient(135deg,var(--primary),var(--accent));display:flex;align-items:center;justify-content:center;font-size:1.1rem;font-weight:700;margin-bottom:.6rem;font-family:'Orbitron',sans-serif;}
+.user-name-side{font-size:.9rem;font-weight:600;margin-bottom:.2rem;}
+.user-ttfka{font-size:.78rem;color:var(--gold);display:flex;align-items:center;gap:.3rem;}
+.nav{flex:1;padding:.75rem 0;overflow-y:auto;}
+.nav-section-label{font-size:.65rem;letter-spacing:.15rem;color:var(--sub);padding:.5rem 1.25rem .3rem;text-transform:uppercase;}
+.nav-item{display:flex;align-items:center;gap:.75rem;padding:.7rem 1.25rem;cursor:pointer;color:var(--sub);font-size:.88rem;font-weight:500;transition:all .25s;border-left:2px solid transparent;}
+.nav-item:hover{color:var(--text);background:rgba(255,255,255,.03);}
+.nav-item.active{color:var(--primary2);background:rgba(124,92,252,.08);border-left-color:var(--primary);}
+.nav-icon{font-size:1rem;width:20px;text-align:center;flex-shrink:0;}
+.nav-badge{margin-left:auto;background:var(--accent);color:#fff;font-size:.65rem;padding:.15rem .45rem;border-radius:20px;font-weight:700;}
+.sidebar-footer{padding:1rem 1.25rem;border-top:1px solid var(--border);}
+.logout-btn-side{width:100%;background:rgba(252,92,125,.08);border:1px solid rgba(252,92,125,.2);color:var(--accent);padding:.55rem;border-radius:8px;cursor:pointer;font-family:'Syne',sans-serif;font-size:.82rem;transition:all .3s;}
+.logout-btn-side:hover{background:rgba(252,92,125,.15);}
+
+/* MAIN */
+.main{margin-left:240px;flex:1;padding:2rem;position:relative;z-index:1;}
+.page{display:none;}
+.page.active{display:block;animation:fadeUp .3s ease;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:translateY(0);}}
+.page-header{margin-bottom:2rem;}
+.page-title{font-family:'Orbitron',sans-serif;font-size:1.4rem;font-weight:700;letter-spacing:.1rem;margin-bottom:.3rem;}
+.page-sub{color:var(--sub);font-size:.85rem;}
+
+/* CARDS */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:1.5rem;}
+
+/* STATS */
+.stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1rem;margin-bottom:2rem;}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:1.25rem;position:relative;overflow:hidden;}
+.stat-card::before{content:'';position:absolute;top:0;right:0;width:60px;height:60px;background:radial-gradient(circle,rgba(124,92,252,.15),transparent 70%);}
+.stat-label{font-size:.7rem;color:var(--sub);letter-spacing:.1rem;text-transform:uppercase;margin-bottom:.4rem;}
+.stat-val{font-family:'Orbitron',sans-serif;font-size:1.6rem;font-weight:700;background:linear-gradient(135deg,var(--primary2),var(--accent));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.stat-val.gold{background:linear-gradient(135deg,var(--gold),#ff9800);-webkit-background-clip:text;background-clip:text;}
+.stat-val.green{background:linear-gradient(135deg,var(--green),var(--cyan));-webkit-background-clip:text;background-clip:text;}
+
+/* LEVEL */
+.level-bar-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:.6rem;}
+.level-label{font-size:.78rem;color:var(--sub);}
+.level-num{font-family:'Orbitron',sans-serif;font-size:.9rem;color:var(--primary2);}
+.level-bar{background:rgba(255,255,255,.05);border-radius:8px;height:8px;overflow:hidden;}
+.level-fill{height:100%;background:linear-gradient(90deg,var(--primary),var(--accent));border-radius:8px;transition:width .8s cubic-bezier(.4,0,.2,1);box-shadow:0 0 10px rgba(124,92,252,.5);}
+
+/* PROFILE */
+.profile-card{display:grid;grid-template-columns:auto 1fr;gap:1.5rem;align-items:center;background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:1.75rem;margin-bottom:1.5rem;}
+.profile-avatar-big{width:72px;height:72px;border-radius:18px;background:linear-gradient(135deg,var(--primary),var(--accent));display:flex;align-items:center;justify-content:center;font-family:'Orbitron',sans-serif;font-size:1.6rem;font-weight:900;box-shadow:0 0 30px rgba(124,92,252,.3);}
+.profile-info h2{font-size:1.2rem;font-weight:700;margin-bottom:.3rem;}
+.profile-email{font-size:.82rem;color:var(--sub);margin-bottom:.5rem;}
+.profile-badges{display:flex;gap:.5rem;flex-wrap:wrap;}
+.badge{font-size:.7rem;padding:.25rem .65rem;border-radius:20px;font-weight:600;letter-spacing:.05rem;}
+.badge-level{background:rgba(124,92,252,.15);color:var(--primary2);border:1px solid rgba(124,92,252,.25);}
+.badge-ttfka{background:rgba(245,197,24,.1);color:var(--gold);border:1px solid rgba(245,197,24,.2);}
+
+/* REWARDS */
+.rewards-grid-pass{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:.75rem;margin-top:1.5rem;}
+.reward-pass-item{background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:10px;padding:1rem;text-align:center;transition:all .3s;}
+.reward-pass-item.unlocked{border-color:rgba(124,92,252,.35);background:rgba(124,92,252,.07);}
+.reward-pass-item.locked{opacity:.45;}
+.rp-icon{font-size:1.6rem;margin-bottom:.4rem;}
+.rp-name{font-size:.72rem;color:var(--text);margin-bottom:.25rem;}
+.rp-lvl{font-size:.65rem;color:var(--primary2);}
+
+/* TASKS */
+.tasks-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:1.25rem;}
+.task-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;overflow:hidden;transition:all .35s cubic-bezier(.4,0,.2,1);position:relative;}
+.task-card::after{content:'';position:absolute;top:-50%;left:-60%;width:50%;height:200%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.03),transparent);transform:skewX(-20deg);transition:left .6s ease;}
+.task-card:hover{transform:translateY(-5px);border-color:rgba(124,92,252,.3);box-shadow:0 20px 40px rgba(0,0,0,.4),0 0 30px rgba(124,92,252,.08);}
+.task-card:hover::after{left:130%;}
+.task-inner{padding:1.4rem;position:relative;z-index:1;}
+.task-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1rem;}
+.task-icon{width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,rgba(124,92,252,.2),rgba(252,92,125,.15));border:1px solid rgba(124,92,252,.2);display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0;}
+.task-status{font-size:.65rem;padding:.25rem .6rem;border-radius:20px;font-weight:700;letter-spacing:.06rem;text-transform:uppercase;}
+.s-active{background:rgba(124,92,252,.12);color:var(--primary2);border:1px solid rgba(124,92,252,.2);}
+.s-pending{background:rgba(245,197,24,.1);color:var(--gold);border:1px solid rgba(245,197,24,.2);}
+.s-approved{background:rgba(0,230,118,.1);color:var(--green);border:1px solid rgba(0,230,118,.2);}
+.s-rejected{background:rgba(252,92,125,.1);color:var(--accent);border:1px solid rgba(252,92,125,.2);}
+.task-name{font-weight:700;font-size:1rem;margin-bottom:.35rem;}
+.task-desc{font-size:.8rem;color:var(--sub);line-height:1.5;margin-bottom:1.1rem;}
+.task-rewards{display:flex;gap:.6rem;margin-bottom:1.1rem;}
+.reward-pill{display:flex;align-items:center;gap:.35rem;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:8px;padding:.3rem .65rem;font-size:.78rem;}
+.reward-pill .rval{font-weight:700;color:#fff;}
+.task-divider{height:1px;background:var(--border);margin-bottom:1.1rem;}
+.task-btn{width:100%;padding:.75rem;border-radius:10px;border:none;font-family:'Syne',sans-serif;font-size:.88rem;font-weight:700;cursor:pointer;transition:all .3s;letter-spacing:.03rem;}
+.tb-submit{background:linear-gradient(135deg,var(--primary),var(--accent));color:#fff;}
+.tb-submit:hover{transform:translateY(-2px);box-shadow:0 8px 25px rgba(124,92,252,.4);}
+.tb-pending{background:rgba(245,197,24,.08);border:1px solid rgba(245,197,24,.2);color:var(--gold);cursor:not-allowed;}
+.tb-approved{background:rgba(0,230,118,.08);border:1px solid rgba(0,230,118,.2);color:var(--green);cursor:not-allowed;}
+.tb-rejected{background:rgba(252,92,125,.08);border:1px solid rgba(252,92,125,.2);color:var(--accent);cursor:pointer;}
+.tb-rejected:hover{background:rgba(252,92,125,.15);}
+.reject-reason{margin-top:.5rem;font-size:.75rem;color:var(--accent);}
+
+/* DAILY */
+.daily-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:1.25rem;margin-bottom:2rem;}
+.daily-card{background:var(--surface);border:1px solid var(--border);border-radius:18px;overflow:hidden;cursor:pointer;transition:all .4s cubic-bezier(.4,0,.2,1);position:relative;aspect-ratio:3/4;display:flex;align-items:center;justify-content:center;}
+.daily-card:hover:not(.opened):not(.claimed){transform:translateY(-8px) scale(1.02);border-color:rgba(124,92,252,.4);box-shadow:0 25px 50px rgba(0,0,0,.5),0 0 40px rgba(124,92,252,.15);}
+.daily-card .card-back{position:absolute;inset:0;background:linear-gradient(135deg,#0e0e1c,#1a1a2e);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.75rem;}
+.ttf-big{font-family:'Orbitron',sans-serif;font-size:3rem;font-weight:900;background:linear-gradient(135deg,rgba(124,92,252,.35),rgba(252,92,125,.25));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.tap-hint{font-size:.7rem;color:var(--sub);letter-spacing:.12rem;}
+.daily-card.claimed{cursor:not-allowed;opacity:.5;}
+.daily-card .card-front{display:none;position:absolute;inset:0;flex-direction:column;align-items:center;justify-content:center;gap:1rem;padding:1.5rem;text-align:center;}
+.daily-card.opened .card-back{display:none;}
+.daily-card.opened .card-front{display:flex;animation:cardFlip .5s ease;}
+@keyframes cardFlip{from{opacity:0;transform:scale(.8);}to{opacity:1;transform:scale(1);}}
+.rarity-common.opened .card-front{background:linear-gradient(135deg,#1a1a2e,#151525);}
+.rarity-rare.opened .card-front{background:linear-gradient(135deg,#0d1f3c,#0a1628);}
+.rarity-epic.opened .card-front{background:linear-gradient(135deg,#1e0f3c,#140a28);}
+.rarity-mythic.opened .card-front{background:linear-gradient(135deg,#3c0f1e,#280a14);}
+.rarity-common{border-color:rgba(124,92,252,.3);}
+.rarity-rare{border-color:rgba(0,229,255,.4);}
+.rarity-epic{border-color:rgba(168,85,247,.5);}
+.rarity-mythic{border-color:rgba(252,92,125,.6);box-shadow:0 0 30px rgba(252,92,125,.2);}
+.card-reward-icon{font-size:2.5rem;}
+.card-reward-name{font-weight:700;font-size:1rem;}
+.card-reward-amount{font-family:'Orbitron',sans-serif;font-size:1.3rem;font-weight:900;color:var(--gold);}
+.rarity-tag{font-size:.65rem;padding:.2rem .6rem;border-radius:20px;font-weight:700;letter-spacing:.08rem;}
+.rt-common{background:rgba(124,92,252,.15);color:var(--primary2);}
+.rt-rare{background:rgba(0,229,255,.1);color:var(--cyan);}
+.rt-epic{background:rgba(168,85,247,.15);color:#c084fc;}
+.rt-mythic{background:rgba(252,92,125,.15);color:var(--accent);}
+.rarity-legend{display:grid;grid-template-columns:repeat(4,1fr);gap:.75rem;margin-top:1.5rem;}
+.rarity-item{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1rem;text-align:center;}
+.rarity-item-name{font-size:.8rem;font-weight:600;margin-bottom:.3rem;}
+.rarity-item-desc{font-size:.72rem;color:var(--sub);line-height:1.4;}
+
+/* SHOP */
+.shop-filters{display:flex;gap:.6rem;margin-bottom:1.5rem;flex-wrap:wrap;}
+.filter-btn{background:rgba(255,255,255,.04);border:1px solid var(--border);color:var(--sub);padding:.4rem 1rem;border-radius:20px;cursor:pointer;font-size:.8rem;transition:all .3s;font-family:'Syne',sans-serif;}
+.filter-btn.active{background:rgba(124,92,252,.15);border-color:rgba(124,92,252,.4);color:var(--primary2);}
+.shop-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:1rem;}
+.shop-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:1.25rem;text-align:center;transition:all .3s;}
+.shop-card:hover{border-color:rgba(252,92,125,.3);transform:translateY(-4px);}
+.shop-icon{font-size:2rem;margin-bottom:.6rem;}
+.shop-name{font-weight:700;font-size:.9rem;margin-bottom:.3rem;}
+.shop-desc{font-size:.72rem;color:var(--sub);margin-bottom:.9rem;line-height:1.4;min-height:2rem;}
+.shop-price{display:flex;align-items:center;justify-content:center;gap:.4rem;font-family:'Orbitron',sans-serif;font-size:.95rem;font-weight:700;color:var(--gold);margin-bottom:.75rem;}
+.shop-btn{width:100%;background:linear-gradient(135deg,var(--accent),#ff1744);border:none;color:#fff;padding:.6rem;border-radius:8px;cursor:pointer;font-family:'Syne',sans-serif;font-size:.85rem;font-weight:700;transition:all .3s;}
+.shop-btn:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(252,92,125,.3);}
+
+/* REFERRAL */
+.ref-link-box{background:rgba(124,92,252,.06);border:1px solid rgba(124,92,252,.2);border-radius:12px;padding:1rem 1.25rem;display:flex;align-items:center;gap:1rem;margin-bottom:1.5rem;flex-wrap:wrap;}
+.ref-link{flex:1;font-size:.8rem;color:var(--primary2);word-break:break-all;min-width:0;}
+.copy-btn{background:rgba(124,92,252,.15);border:1px solid rgba(124,92,252,.3);color:var(--primary2);padding:.45rem .9rem;border-radius:8px;cursor:pointer;font-size:.8rem;white-space:nowrap;transition:all .3s;font-family:'Syne',sans-serif;}
+.copy-btn:hover{background:rgba(124,92,252,.25);}
+.ref-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:1.5rem;}
+.ref-stat{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.25rem;text-align:center;}
+.ref-stat-val{font-family:'Orbitron',sans-serif;font-size:1.4rem;font-weight:700;color:var(--primary2);margin-bottom:.3rem;}
+.ref-stat-label{font-size:.73rem;color:var(--sub);}
+
+/* CONTENT */
+.content-form{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:1.75rem;margin-bottom:1.5rem;}
+.content-form h3{font-size:1rem;font-weight:700;margin-bottom:.3rem;}
+.content-form p{font-size:.82rem;color:var(--sub);margin-bottom:1.5rem;line-height:1.5;}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;}
+.form-group{display:flex;flex-direction:column;gap:.4rem;}
+.form-label{font-size:.75rem;color:var(--sub);letter-spacing:.05rem;}
+.form-inp{background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:10px;padding:.7rem 1rem;color:var(--text);font-family:'Syne',sans-serif;font-size:.86rem;transition:all .3s;}
+.form-inp:focus{outline:none;border-color:rgba(124,92,252,.4);background:rgba(124,92,252,.05);}
+.form-inp::placeholder{color:var(--sub);}
+select.form-inp option{background:#1a1a2e;}
+.submit-content-btn{background:linear-gradient(135deg,var(--primary),var(--accent));border:none;color:#fff;padding:.8rem 2rem;border-radius:10px;cursor:pointer;font-family:'Syne',sans-serif;font-size:.9rem;font-weight:700;transition:all .3s;}
+.submit-content-btn:hover{transform:translateY(-2px);box-shadow:0 8px 25px rgba(124,92,252,.4);}
+.content-rules{background:rgba(245,197,24,.05);border:1px solid rgba(245,197,24,.15);border-radius:12px;padding:1.25rem;}
+.content-rules h4{color:var(--gold);font-size:.9rem;margin-bottom:.75rem;}
+.content-rules ul{list-style:none;display:flex;flex-direction:column;gap:.5rem;}
+.content-rules li{font-size:.82rem;color:var(--sub);padding-left:1rem;position:relative;}
+.content-rules li::before{content:'▸';position:absolute;left:0;color:var(--gold);}
+.my-submissions{margin-top:1.5rem;}
+.submission-item{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1rem 1.25rem;display:flex;align-items:center;gap:1rem;margin-bottom:.75rem;flex-wrap:wrap;}
+.sub-thumb{width:48px;height:48px;border-radius:8px;background:rgba(124,92,252,.1);display:flex;align-items:center;justify-content:center;font-size:1.4rem;flex-shrink:0;}
+.sub-info{flex:1;min-width:0;}
+.sub-title{font-weight:600;font-size:.88rem;margin-bottom:.2rem;}
+.sub-meta{font-size:.75rem;color:var(--sub);}
+.sub-status{font-size:.75rem;padding:.2rem .6rem;border-radius:20px;font-weight:600;white-space:nowrap;}
+.ss-pending{background:rgba(245,197,24,.1);color:var(--gold);border:1px solid rgba(245,197,24,.2);}
+.ss-approved{background:rgba(0,230,118,.1);color:var(--green);border:1px solid rgba(0,230,118,.2);}
+.ss-rejected{background:rgba(252,92,125,.1);color:var(--accent);border:1px solid rgba(252,92,125,.2);}
+
+/* NOTIFICATION */
+.notif{position:fixed;bottom:2rem;right:2rem;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:1rem 1.4rem;border-radius:14px;box-shadow:0 10px 40px rgba(0,0,0,.5);animation:slideInRight .4s cubic-bezier(.4,0,.2,1);z-index:999;max-width:300px;font-size:.88rem;}
+@keyframes slideInRight{from{transform:translateX(350px);opacity:0;}to{transform:translateX(0);opacity:1;}}
+
+/* MODAL */
+.modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:800;align-items:center;justify-content:center;backdrop-filter:blur(15px);}
+.modal.active{display:flex;animation:fadeUp .3s ease;}
+.modal-box{background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:2rem;width:90%;max-width:420px;}
+.modal-title{font-family:'Orbitron',sans-serif;font-size:1.1rem;font-weight:700;margin-bottom:1.5rem;}
+.modal-actions{display:flex;gap:.75rem;margin-top:1.5rem;}
+.modal-btn{flex:1;padding:.75rem;border-radius:10px;border:none;cursor:pointer;font-family:'Syne',sans-serif;font-size:.88rem;font-weight:700;transition:all .3s;}
+.modal-btn-confirm{background:linear-gradient(135deg,var(--primary),var(--accent));color:#fff;}
+.modal-btn-cancel{background:rgba(255,255,255,.06);color:var(--sub);}
+
+/* MOBILE */
+.menu-toggle{display:none;position:fixed;top:1rem;left:1rem;z-index:200;background:var(--surface);border:1px solid var(--border);width:40px;height:40px;border-radius:10px;align-items:center;justify-content:center;cursor:pointer;font-size:1.2rem;}
+@media(max-width:768px){
+  .sidebar{transform:translateX(-100%);}
+  .sidebar.open{transform:translateX(0);}
+  .main{margin-left:0;padding:1rem;padding-top:4rem;}
+  .menu-toggle{display:flex;}
+  .daily-cards{gap:.6rem;}
+  .form-row{grid-template-columns:1fr;}
+  .ref-stats{grid-template-columns:1fr 1fr;}
+  .rarity-legend{grid-template-columns:repeat(2,1fr);}
+  .stats-row{grid-template-columns:repeat(2,1fr);}
+}
+</style>
+</head>
+<body>
+
+<div id="loadingScreen">
+  <div class="logo">TTFHUB</div>
+  <div class="loader-ring"></div>
+</div>
+
+<div class="auth-overlay" id="authOverlay">
+  <div class="auth-box">
+    <div class="auth-logo">TTFHUB</div>
+    <div class="auth-sub">КЛАНОВАЯ СИСТЕМА · SEASON 1</div>
+    <div class="auth-tabs">
+      <button class="auth-tab active" onclick="switchTab('login',event)">Вход</button>
+      <button class="auth-tab" onclick="switchTab('register',event)">Регистрация</button>
+    </div>
+    <div id="authMsg" class="auth-msg"></div>
+    <div class="auth-form active" id="loginForm">
+      <input class="inp" type="email" placeholder="Email" id="loginEmail">
+      <input class="inp" type="password" placeholder="Пароль" id="loginPass">
+      <button class="auth-btn-main" id="loginBtn" onclick="handleLogin()">ВОЙТИ</button>
+    </div>
+    <div class="auth-form" id="registerForm">
+      <input class="inp" type="text" placeholder="Ник" id="regUser">
+      <input class="inp" type="email" placeholder="Email" id="regEmail">
+      <input class="inp" type="password" placeholder="Пароль (мин. 6 симв.)" id="regPass">
+      <input class="inp" type="password" placeholder="Подтвердить пароль" id="regPass2">
+      <input class="inp" type="text" placeholder="Реферальный код (необязательно)" id="regRef">
+      <button class="auth-btn-main" id="regBtn" onclick="handleRegister()">СОЗДАТЬ АККАУНТ</button>
+    </div>
+  </div>
+</div>
+
+<button class="menu-toggle" id="menuToggle" onclick="toggleSidebar()">☰</button>
+
+<div class="app" id="app">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-text">TTFHUB</div>
+      <div class="logo-sub">КЛАНОВАЯ СИСТЕМА</div>
+    </div>
+    <div class="user-panel">
+      <div class="user-avatar" id="sideAvatar">T</div>
+      <div class="user-name-side" id="sideName">Player</div>
+      <div class="user-ttfka">⬡ <span id="sideTTFKA">0</span> TTFKA</div>
+    </div>
+    <nav class="nav">
+      <div class="nav-section-label">Профиль</div>
+      <div class="nav-item active" onclick="goTo('account')"><span class="nav-icon">👤</span>Аккаунт</div>
+      <div class="nav-item" onclick="goTo('balance')"><span class="nav-icon">⬡</span>Баланс</div>
+      <div class="nav-section-label">Активности</div>
+      <div class="nav-item" onclick="goTo('tasks')"><span class="nav-icon">📋</span>Задания<span class="nav-badge" id="pendingBadge" style="display:none">!</span></div>
+      <div class="nav-item" onclick="goTo('daily')"><span class="nav-icon">🎁</span>Ежедневный бонус</div>
+      <div class="nav-item" onclick="goTo('content')"><span class="nav-icon">🎬</span>Создание контента</div>
+      <div class="nav-section-label">Магазин</div>
+      <div class="nav-item" onclick="goTo('shop')"><span class="nav-icon">🛍️</span>Магазин</div>
+      <div class="nav-item" onclick="goTo('referral')"><span class="nav-icon">🔗</span>Рефералы</div>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="logout-btn-side" onclick="logout()">Выйти из аккаунта</button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <!-- ACCOUNT -->
+    <div class="page active" id="page-account">
+      <div class="page-header">
+        <div class="page-title">Аккаунт</div>
+        <div class="page-sub">Твой профиль в клановой системе TTFHub</div>
+      </div>
+      <div class="profile-card">
+        <div class="profile-avatar-big" id="profileAvatar">T</div>
+        <div class="profile-info">
+          <h2 id="profileName">Player</h2>
+          <div class="profile-email" id="profileEmail">—</div>
+          <div class="profile-badges">
+            <span class="badge badge-level">УР. <span id="profileLevel">1</span></span>
+            <span class="badge badge-ttfka">⬡ <span id="profileTTFKA">0</span> TTFKA</span>
+          </div>
+        </div>
+      </div>
+      <div class="stats-row">
+        <div class="stat-card"><div class="stat-label">Уровень</div><div class="stat-val" id="statLevel">1</div></div>
+        <div class="stat-card"><div class="stat-label">TTFKA</div><div class="stat-val gold" id="statTTFKA">0</div></div>
+        <div class="stat-card"><div class="stat-label">Всего XP</div><div class="stat-val green" id="statXP">0</div></div>
+        <div class="stat-card"><div class="stat-label">Выполнено заданий</div><div class="stat-val" id="statTasks">0</div></div>
+      </div>
+      <div class="card">
+        <div class="level-bar-header">
+          <span class="level-label">Прогресс до следующего уровня</span>
+          <span class="level-num" id="xpProgress">0 / 500 XP</span>
+        </div>
+        <div class="level-bar"><div class="level-fill" id="levelFill" style="width:0%"></div></div>
+        <div class="rewards-grid-pass" id="rewardsGrid"></div>
+      </div>
+    </div>
+
+    <!-- BALANCE -->
+    <div class="page" id="page-balance">
+      <div class="page-header">
+        <div class="page-title">Баланс</div>
+        <div class="page-sub">Твои TTFKA — клановая валюта TTFHub</div>
+      </div>
+      <div class="stats-row">
+        <div class="stat-card"><div class="stat-label">TTFKA на балансе</div><div class="stat-val gold" id="balTTFKA">0</div></div>
+        <div class="stat-card"><div class="stat-label">Потрачено</div><div class="stat-val" id="balSpent">0</div></div>
+        <div class="stat-card"><div class="stat-label">Заработано</div><div class="stat-val green" id="balEarned">0</div></div>
+      </div>
+      <div class="card">
+        <div style="font-weight:700;margin-bottom:.5rem;">💡 Что такое TTFKA?</div>
+        <div style="font-size:.83rem;color:var(--sub);line-height:1.7;"><b style="color:var(--gold)">TTFKA</b> — официальная валюта клана TTF. Зарабатывай выполняя задания, снимая контент с кланом и открывая ежедневные карточки. Трать в магазине на роли, доступы и бусты.</div>
+      </div>
+    </div>
+
+    <!-- TASKS -->
+    <div class="page" id="page-tasks">
+      <div class="page-header">
+        <div class="page-title">Задания</div>
+        <div class="page-sub">Выполняй задания — отправляй на проверку — получай TTFKA</div>
+      </div>
+      <div class="tasks-grid" id="tasksGrid"></div>
+    </div>
+
+    <!-- DAILY -->
+    <div class="page" id="page-daily">
+      <div class="page-header">
+        <div class="page-title">Ежедневный бонус</div>
+        <div class="page-sub">Выбери одну из трёх карточек. Доступно раз в день.</div>
+      </div>
+      <div id="dailyStatus" style="display:none;background:rgba(0,230,118,.08);border:1px solid rgba(0,230,118,.2);border-radius:12px;padding:1rem 1.25rem;margin-bottom:1.5rem;font-size:.85rem;color:var(--green);">✅ Ты уже открыл карточку сегодня. Возвращайся завтра!</div>
+      <div class="daily-cards">
+        <div class="daily-card" id="dc0" onclick="openDailyCard(0)"><div class="card-back"><div class="ttf-big">TTF</div><div class="tap-hint">НАЖМИ</div></div><div class="card-front"></div></div>
+        <div class="daily-card" id="dc1" onclick="openDailyCard(1)"><div class="card-back"><div class="ttf-big">TTF</div><div class="tap-hint">НАЖМИ</div></div><div class="card-front"></div></div>
+        <div class="daily-card" id="dc2" onclick="openDailyCard(2)"><div class="card-back"><div class="ttf-big">TTF</div><div class="tap-hint">НАЖМИ</div></div><div class="card-front"></div></div>
+      </div>
+      <div class="card">
+        <div style="font-weight:700;margin-bottom:1rem;">Редкость наград</div>
+        <div class="rarity-legend">
+          <div class="rarity-item"><div class="rarity-tag rt-common" style="display:inline-block;margin-bottom:.5rem;">Обычный</div><div class="rarity-item-name">5–20 TTFKA</div><div class="rarity-item-desc">Небольшой бонус</div></div>
+          <div class="rarity-item"><div class="rarity-tag rt-rare" style="display:inline-block;margin-bottom:.5rem;">Редкий</div><div class="rarity-item-name">25–75 TTFKA</div><div class="rarity-item-desc">Приятная прибавка</div></div>
+          <div class="rarity-item"><div class="rarity-tag rt-epic" style="display:inline-block;margin-bottom:.5rem;">Эпический</div><div class="rarity-item-name">100–200 TTFKA</div><div class="rarity-item-desc">Крупная награда</div></div>
+          <div class="rarity-item"><div class="rarity-tag rt-mythic" style="display:inline-block;margin-bottom:.5rem;">Мифический</div><div class="rarity-item-name">250–500 TTFKA</div><div class="rarity-item-desc">Джекпот! Очень редко</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SHOP -->
+    <div class="page" id="page-shop">
+      <div class="page-header">
+        <div class="page-title">Магазин</div>
+        <div class="page-sub">Трать TTFKA на роли, доступы и бусты</div>
+      </div>
+      <div class="shop-filters" id="shopFilters"></div>
+      <div class="shop-grid" id="shopGrid"></div>
+    </div>
+
+    <!-- REFERRAL -->
+    <div class="page" id="page-referral">
+      <div class="page-header">
+        <div class="page-title">Реферальная система</div>
+        <div class="page-sub">Приглашай друзей — получай TTFKA за каждого</div>
+      </div>
+      <div class="card" style="margin-bottom:1.5rem;">
+        <div style="font-weight:700;margin-bottom:.75rem;">Твоя реферальная ссылка</div>
+        <div class="ref-link-box">
+          <div class="ref-link" id="refLink">Загрузка...</div>
+          <button class="copy-btn" onclick="copyRef()">Копировать</button>
+        </div>
+        <div style="font-size:.8rem;color:var(--sub);">За каждого приглашённого — <b style="color:var(--gold)">50 TTFKA</b> тебе и <b style="color:var(--primary2)">25 TTFKA</b> другу при регистрации.</div>
+      </div>
+      <div class="ref-stats">
+        <div class="ref-stat"><div class="ref-stat-val" id="refCount">0</div><div class="ref-stat-label">Приглашено</div></div>
+        <div class="ref-stat"><div class="ref-stat-val" id="refEarned">0</div><div class="ref-stat-label">TTFKA заработано</div></div>
+        <div class="ref-stat"><div class="ref-stat-val" id="refRank">—</div><div class="ref-stat-label">Ранг рефера</div></div>
+      </div>
+    </div>
+
+    <!-- CONTENT -->
+    <div class="page" id="page-content">
+      <div class="page-header">
+        <div class="page-title">Создание контента</div>
+        <div class="page-sub">Снимай ролики с TTF — получай TTFKA</div>
+      </div>
+      <div class="content-form">
+        <h3>📤 Отправить ролик на проверку</h3>
+        <p>Залей ролик с кланом TTF или с моими видео на YouTube / TikTok и отправь ссылку. После проверки получишь TTFKA на баланс.</p>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">ТИП РОЛИКА</label>
+            <select class="form-inp" id="contentType">
+              <option value="youtube">YouTube (полный)</option>
+              <option value="shorts">YouTube Shorts</option>
+              <option value="tiktok">TikTok</option>
+              <option value="collab">Совместный с TTF</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">ССЫЛКА НА РОЛИК</label>
+            <input class="form-inp" type="url" id="contentUrl" placeholder="https://youtube.com/...">
+          </div>
+        </div>
+        <div class="form-group" style="margin-bottom:1rem;">
+          <label class="form-label">ОПИСАНИЕ (необязательно)</label>
+          <input class="form-inp" type="text" id="contentDesc" placeholder="Кратко о ролике...">
+        </div>
+        <button class="submit-content-btn" onclick="submitContent()">📤 Отправить на проверку</button>
+      </div>
+      <div class="content-rules">
+        <h4>📋 Правила и награды</h4>
+        <ul>
+          <li>YouTube ролик (от 3 мин): <b style="color:var(--gold)">100–300 TTFKA</b> в зависимости от просмотров</li>
+          <li>YouTube Shorts / TikTok: <b style="color:var(--gold)">30–100 TTFKA</b></li>
+          <li>Совместный ролик с TTF: <b style="color:var(--gold)">+50% бонус</b></li>
+          <li>Ролик должен содержать #TTFHub или упоминание клана</li>
+          <li>Один ролик — одна заявка. Накрутка запрещена.</li>
+        </ul>
+      </div>
+      <div class="my-submissions">
+        <div style="font-weight:700;margin-bottom:1rem;">Мои заявки</div>
+        <div id="myContentSubmissions" style="color:var(--sub);font-size:.83rem;">Заявок пока нет.</div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<div class="modal" id="purchaseModal">
+  <div class="modal-box">
+    <div class="modal-title">Подтверждение покупки</div>
+    <div id="purchaseDetails"></div>
+    <div class="modal-actions">
+      <button class="modal-btn modal-btn-confirm" id="confirmPurchaseBtn">КУПИТЬ</button>
+      <button class="modal-btn modal-btn-cancel" onclick="closeModal('purchaseModal')">ОТМЕНА</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL='https://ozgrmhowxhojxtqbhbtz.supabase.co';
+const SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im96Z3JtaG93eGhvanh0cWJoYnR6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ1NDYwNjMsImV4cCI6MjA5MDEyMjA2M30.Cf8OMf6bJ8u0OhBw-4NOj5jr7dfHBkjjX9WtM4fBrGQ';
+const RESEND_KEY='re_8gsEf9Yr_3yMzi3pCZHTDJUaUurv7KYV1';
+const ADMIN_EMAIL='niksowhat1@gmail.com';
+const SITE_URL='https://fleybi.space/ttfhub';
+
+const {createClient}=supabase;
+const sb=createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
+let user=null,profile=null,taskSubs={},contentSubs=[];
+
+const defaultTasks=[
+  {id:'t1',icon:'🎯',name:'Приветствие',desc:'Зайди в систему и представься клану',xp:50,coins:20},
+  {id:'t2',icon:'🎮',name:'Игровой день',desc:'Сыграй 3 матча в течение дня',xp:100,coins:50},
+  {id:'t3',icon:'🏆',name:'Победитель',desc:'Одержи 5 побед за неделю',xp:150,coins:80},
+  {id:'t4',icon:'👥',name:'Рекрут',desc:'Пригласи нового участника в клан',xp:200,coins:100},
+  {id:'t5',icon:'🎙️',name:'Стример',desc:'Выйди в стрим с кланом',xp:250,coins:120},
+  {id:'t6',icon:'👑',name:'Легенда',desc:'Достигни топ-10 в рейтинге клана',xp:500,coins:200},
+];
+const cfg={xpPerLevel:500,tasks:defaultTasks,shopItems:[
+  {id:1,name:'VIP Роль',icon:'👑',desc:'Эксклюзивная роль в Discord',price:500,category:'roles'},
+  {id:2,name:'Elite Роль',icon:'💎',desc:'Премиум статус в клане',price:1000,category:'roles'},
+  {id:3,name:'Закрытый Чат',icon:'🔒',desc:'Приватный канал VIP',price:300,category:'access'},
+  {id:4,name:'Приватные Игры',icon:'🎮',desc:'Закрытые игровые сеансы',price:700,category:'access'},
+  {id:5,name:'Цвет Ника',icon:'🎨',desc:'Кастомизируй ник цветом',price:200,category:'cosmetics'},
+  {id:6,name:'Рамка Профиля',icon:'🖼️',desc:'Красивая рамка профиля',price:400,category:'cosmetics'},
+  {id:7,name:'x2 XP Буст',icon:'⚡',desc:'Двойной опыт на 24 часа',price:400,category:'boosters'},
+  {id:8,name:'Буст Батлпаса',icon:'🚀',desc:'Ускори прогресс батлпаса',price:800,category:'boosters'},
+]};
+
+async function init(){
+  const {data:{session}}=await sb.auth.getSession();
+  if(session)await loadProfile(session.user);
+  else showAuth();
+  document.getElementById('loadingScreen').style.display='none';
+  try{
+    const {data}=await sb.from('site_config').select('value').eq('key','tasks').single();
+    if(data?.value){const p=typeof data.value==='string'?JSON.parse(data.value):data.value;if(Array.isArray(p))cfg.tasks=p;}
+  }catch(e){}
+}
+
+async function loadProfile(authUser){
+  user=authUser;
+  const {data,error}=await sb.from('profiles').select('*').eq('id',authUser.id).single();
+  if(error||!data){
+    const np={id:authUser.id,username:authUser.user_metadata?.username||authUser.email.split('@')[0],
+      email:authUser.email,level:1,xp:0,coins:0,total_xp:0,tasks_completed:[],
+      purchases:[],inventory:[],ref_code:genRef(),ref_by:null,ref_count:0,ref_earned:0,ttfka_earned:0,ttfka_spent:0};
+    await sb.from('profiles').insert(np);profile=np;
+  }else{profile=data;}
+  await loadTaskSubs();await loadContentSubs();showApp();
+}
+
+function genRef(){return Math.random().toString(36).substr(2,8).toUpperCase();}
+
+async function loadTaskSubs(){
+  const {data}=await sb.from('task_submissions').select('*').eq('user_id',profile.id);
+  taskSubs={};if(data)data.forEach(s=>{taskSubs[s.task_id]=s;});
+}
+
+async function loadContentSubs(){
+  const {data}=await sb.from('content_submissions').select('*').eq('user_id',profile.id).order('created_at',{ascending:false});
+  contentSubs=data||[];
+}
+
+function switchTab(tab,e){
+  document.querySelectorAll('.auth-form').forEach(f=>f.classList.remove('active'));
+  document.querySelectorAll('.auth-tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById(tab+'Form').classList.add('active');e.target.classList.add('active');
+  document.getElementById('authMsg').className='auth-msg';
+}
+
+async function handleLogin(){
+  const email=document.getElementById('loginEmail').value.trim();
+  const pass=document.getElementById('loginPass').value;
+  if(!email||!pass){setMsg('Заполни все поля','err');return;}
+  const btn=document.getElementById('loginBtn');btn.disabled=true;btn.textContent='ВХОДИМ...';
+  const {data,error}=await sb.auth.signInWithPassword({email,password:pass});
+  if(error){setMsg('Неверный email или пароль','err');btn.disabled=false;btn.textContent='ВОЙТИ';return;}
+  await loadProfile(data.user);
+}
+
+async function handleRegister(){
+  const username=document.getElementById('regUser').value.trim();
+  const email=document.getElementById('regEmail').value.trim();
+  const pass=document.getElementById('regPass').value;
+  const pass2=document.getElementById('regPass2').value;
+  const refCode=document.getElementById('regRef').value.trim().toUpperCase();
+  if(!username||!email||!pass){setMsg('Заполни все поля','err');return;}
+  if(username.length<3){setMsg('Ник минимум 3 символа','err');return;}
+  if(pass.length<6){setMsg('Пароль минимум 6 символов','err');return;}
+  if(pass!==pass2){setMsg('Пароли не совпадают','err');return;}
+  const btn=document.getElementById('regBtn');btn.disabled=true;btn.textContent='СОЗДАЁМ...';
+  const {data:ex}=await sb.from('profiles').select('id').eq('username',username).single();
+  if(ex){setMsg('Ник уже занят','err');btn.disabled=false;btn.textContent='СОЗДАТЬ АККАУНТ';return;}
+  let refById=null;
+  if(refCode){const {data:ru}=await sb.from('profiles').select('id').eq('ref_code',refCode).single();if(ru)refById=ru.id;}
+  const {data,error}=await sb.auth.signUp({email,password:pass,options:{data:{username}}});
+  if(error){setMsg('Ошибка регистрации','err');btn.disabled=false;btn.textContent='СОЗДАТЬ АККАУНТ';return;}
+  if(data.user){
+    const bonusCoins=refById?25:0;
+    const np={id:data.user.id,username,email,level:1,xp:0,coins:bonusCoins,total_xp:0,
+      tasks_completed:[],purchases:[],inventory:[],ref_code:genRef(),ref_by:refById,
+      ref_count:0,ref_earned:0,ttfka_earned:bonusCoins,ttfka_spent:0};
+    await sb.from('profiles').insert(np);
+    if(refById){
+      const {data:rp}=await sb.from('profiles').select('coins,ref_count,ref_earned,ttfka_earned').eq('id',refById).single();
+      if(rp)await sb.from('profiles').update({coins:(rp.coins||0)+50,ref_count:(rp.ref_count||0)+1,ref_earned:(rp.ref_earned||0)+50,ttfka_earned:(rp.ttfka_earned||0)+50}).eq('id',refById);
+    }
+    await loadProfile(data.user);
+  }else{setMsg('✅ Проверь почту!','ok');btn.disabled=false;btn.textContent='СОЗДАТЬ АККАУНТ';}
+}
+
+function setMsg(msg,type){const el=document.getElementById('authMsg');el.textContent=msg;el.className='auth-msg '+type;}
+
+async function logout(){
+  if(confirm('Выйти?')){await sb.auth.signOut();user=null;profile=null;document.getElementById('app').classList.remove('visible');document.getElementById('authOverlay').classList.remove('hidden');}
+}
+
+function goTo(page){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('page-'+page).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n=>{if(n.getAttribute('onclick')===`goTo('${page}')`)n.classList.add('active');});
+  if(page==='tasks')renderTasks();
+  if(page==='shop')renderShop();
+  if(page==='daily')renderDaily();
+  if(page==='referral')renderReferral();
+  if(page==='content')renderContent();
+  if(page==='balance')renderBalance();
+  if(window.innerWidth<768)document.getElementById('sidebar').classList.remove('open');
+}
+function toggleSidebar(){document.getElementById('sidebar').classList.toggle('open');}
+
+function renderUI(){
+  if(!profile)return;
+  const av=profile.username[0].toUpperCase();
+  ['sideAvatar','profileAvatar'].forEach(id=>document.getElementById(id).textContent=av);
+  document.getElementById('sideName').textContent=profile.username;
+  document.getElementById('sideTTFKA').textContent=(profile.coins||0).toLocaleString();
+  document.getElementById('profileName').textContent=profile.username;
+  document.getElementById('profileEmail').textContent=profile.email||'—';
+  document.getElementById('profileLevel').textContent=profile.level;
+  document.getElementById('profileTTFKA').textContent=(profile.coins||0).toLocaleString();
+  document.getElementById('statLevel').textContent=profile.level;
+  document.getElementById('statTTFKA').textContent=(profile.coins||0).toLocaleString();
+  document.getElementById('statXP').textContent=(profile.total_xp||0).toLocaleString();
+  document.getElementById('statTasks').textContent=(profile.tasks_completed||[]).length;
+  const pct=Math.min(100,(profile.xp/cfg.xpPerLevel)*100);
+  document.getElementById('levelFill').style.width=pct+'%';
+  document.getElementById('xpProgress').textContent=`${profile.xp} / ${cfg.xpPerLevel} XP`;
+  renderRewards();renderPendingBadge();
+}
+
+function renderRewards(){
+  const rewards=[{level:1,icon:'🎁',name:'100 TTFKA'},{level:5,icon:'🏅',name:'Значок'},{level:10,icon:'👑',name:'VIP'},{level:25,icon:'💎',name:'Elite'},{level:50,icon:'🚀',name:'2x XP'},{level:100,icon:'👿',name:'Легенда'}];
+  document.getElementById('rewardsGrid').innerHTML=rewards.map(r=>`<div class="reward-pass-item ${profile.level>=r.level?'unlocked':'locked'}"><div class="rp-icon">${r.icon}</div><div class="rp-name">${r.name}</div><div class="rp-lvl">УР. ${r.level}</div></div>`).join('');
+}
+
+function renderPendingBadge(){
+  const has=Object.values(taskSubs).some(s=>s.status==='rejected');
+  document.getElementById('pendingBadge').style.display=has?'':'none';
+}
+
+function renderTasks(){
+  document.getElementById('tasksGrid').innerHTML=cfg.tasks.map(task=>{
+    const sub=taskSubs[task.id];
+    const isA=sub?.status==='approved',isP=sub?.status==='pending',isR=sub?.status==='rejected';
+    let sc,st,bc,bt;
+    if(isA){sc='s-approved';st='✓ Одобрено';bc='tb-approved';bt='✓ ОДОБРЕНО';}
+    else if(isP){sc='s-pending';st='⏳ На проверке';bc='tb-pending';bt='⏳ НА ПРОВЕРКЕ';}
+    else if(isR){sc='s-rejected';st='✕ Отклонено';bc='tb-rejected';bt='🔄 ОТПРАВИТЬ СНОВА';}
+    else{sc='s-active';st='АКТИВНО';bc='tb-submit';bt='📤 ОТПРАВИТЬ';}
+    const ok=!isA&&!isP;
+    return `<div class="task-card"><div class="task-inner">
+      <div class="task-top"><div class="task-icon">${task.icon||'🎯'}</div><div class="task-status ${sc}">${st}</div></div>
+      <div class="task-name">${task.name}</div><div class="task-desc">${task.desc}</div>
+      <div class="task-rewards"><div class="reward-pill">⭐ <span class="rval">+${task.xp} XP</span></div><div class="reward-pill">⬡ <span class="rval">+${task.coins} TTFKA</span></div></div>
+      <div class="task-divider"></div>
+      <button class="task-btn ${bc}" ${!ok?'disabled':''} onclick="submitTask('${task.id}')">${bt}</button>
+      ${isR&&sub?.reject_reason?`<div class="reject-reason">Причина: ${sub.reject_reason}</div>`:''}
+    </div></div>`;
+  }).join('');
+}
+
+async function submitTask(taskId){
+  const task=cfg.tasks.find(t=>t.id===taskId);if(!task)return;
+  const sub=taskSubs[taskId];
+  if(sub?.status==='pending'){notify('⏳ Уже на проверке!');return;}
+  if(sub?.status==='approved')return;
+  if(sub?.status==='rejected')await sb.from('task_submissions').delete().eq('id',sub.id);
+  const {data,error}=await sb.from('task_submissions').insert({
+    user_id:profile.id,username:profile.username,task_id:taskId,
+    task_title:task.name,reward_coins:task.coins,reward_xp:task.xp,status:'pending'
+  }).select().single();
+  if(error){notify('❌ Ошибка: '+error.message);return;}
+  taskSubs[taskId]=data;
+  sendEmail(`📋 Заявка: ${task.name} от ${profile.username}`,`Игрок: ${profile.username}<br>Задание: ${task.name}<br>Награда: ${task.xp} XP + ${task.coins} TTFKA`);
+  notify('📤 Задание отправлено на проверку!');renderTasks();
+}
+
+let dailyCardsData=[],dailyDone=false;
+function rand(a,b){return Math.floor(Math.random()*(b-a+1))+a;}
+
+function renderDaily(){
+  const today=new Date().toDateString();
+  dailyDone=localStorage.getItem('ttfd_'+profile.id)===today;
+  document.getElementById('dailyStatus').style.display=dailyDone?'block':'none';
+  const pool=[
+    {r:'common',n:'TTFKA Бонус',i:'⬡',amt:()=>rand(5,20),rt:'rt-common',rl:'Обычный',rc:'rarity-common'},
+    {r:'common',n:'TTFKA Бонус',i:'⬡',amt:()=>rand(5,20),rt:'rt-common',rl:'Обычный',rc:'rarity-common'},
+    {r:'common',n:'TTFKA Бонус',i:'⬡',amt:()=>rand(5,20),rt:'rt-common',rl:'Обычный',rc:'rarity-common'},
+    {r:'rare',n:'TTFKA Бонус',i:'💫',amt:()=>rand(25,75),rt:'rt-rare',rl:'Редкий',rc:'rarity-rare'},
+    {r:'rare',n:'TTFKA Бонус',i:'💫',amt:()=>rand(25,75),rt:'rt-rare',rl:'Редкий',rc:'rarity-rare'},
+    {r:'epic',n:'Эпик Бонус',i:'✨',amt:()=>rand(100,200),rt:'rt-epic',rl:'Эпический',rc:'rarity-epic'},
+    {r:'mythic',n:'JACKPOT!',i:'🔥',amt:()=>rand(250,500),rt:'rt-mythic',rl:'Мифический',rc:'rarity-mythic'},
+  ];
+  // Shuffle deterministically based on today's date
+  const s=today+profile.id;let h=0;for(let i=0;i<s.length;i++)h=Math.imul(31,h)+s.charCodeAt(i)|0;
+  const sh=[...pool].sort((a,b)=>((h^a.r.charCodeAt(0))-(h^b.r.charCodeAt(0))));
+  dailyCardsData=[sh[0],sh[1],sh[2]];
+  for(let i=0;i<3;i++){
+    const c=document.getElementById('dc'+i);
+    c.className='daily-card'+(dailyDone?' claimed':'');
+    c.querySelector('.card-front').innerHTML='';
+  }
+}
+
+async function openDailyCard(idx){
+  if(dailyDone){notify('⏳ Возвращайся завтра!');return;}
+  const today=new Date().toDateString();
+  const d=dailyCardsData[idx];const amount=d.amt();
+  dailyDone=true;localStorage.setItem('ttfd_'+profile.id,today);
+  document.getElementById('dailyStatus').style.display='block';
+  for(let i=0;i<3;i++){if(i!==idx)document.getElementById('dc'+i).classList.add('claimed');}
+  const card=document.getElementById('dc'+idx);
+  card.classList.add('opened',d.rc);
+  card.querySelector('.card-front').innerHTML=`
+    <div class="rarity-tag ${d.rt}">${d.rl}</div>
+    <div class="card-reward-icon">${d.i}</div>
+    <div class="card-reward-name">${d.n}</div>
+    <div class="card-reward-amount">+${amount} TTFKA</div>`;
+  profile.coins=(profile.coins||0)+amount;profile.ttfka_earned=(profile.ttfka_earned||0)+amount;
+  await sb.from('profiles').update({coins:profile.coins,ttfka_earned:profile.ttfka_earned}).eq('id',profile.id);
+  renderUI();notify(`${d.i} ${d.rl}! +${amount} TTFKA`);
+}
+
+function renderShop(cat='roles'){
+  const cats=['roles','access','cosmetics','boosters'];
+  document.getElementById('shopFilters').innerHTML=cats.map(c=>`<button class="filter-btn ${c===cat?'active':''}" onclick="renderShop('${c}')">${{roles:'👑 Роли',access:'🔓 Доступы',cosmetics:'🎨 Визуал',boosters:'⚡ Бусты'}[c]}</button>`).join('');
+  document.getElementById('shopGrid').innerHTML=cfg.shopItems.filter(i=>i.category===cat).map(item=>`
+    <div class="shop-card">
+      <div class="shop-icon">${item.icon}</div><div class="shop-name">${item.name}</div>
+      <div class="shop-desc">${item.desc}</div><div class="shop-price">⬡ ${item.price}</div>
+      <button class="shop-btn" onclick="buyItem(${item.id})">КУПИТЬ</button>
+    </div>`).join('');
+}
+
+function buyItem(itemId){
+  const item=cfg.shopItems.find(i=>i.id===itemId);if(!item)return;
+  if((profile.purchases||[]).includes(itemId)){notify('✅ Уже куплено!');return;}
+  if(profile.coins<item.price){notify('❌ Недостаточно TTFKA!');return;}
+  document.getElementById('purchaseDetails').innerHTML=`<div style="text-align:center;padding:1rem 0;">
+    <div style="font-size:2.5rem;margin-bottom:.75rem;">${item.icon}</div>
+    <div style="font-weight:700;font-size:1.1rem;margin-bottom:.3rem;">${item.name}</div>
+    <div style="color:var(--sub);font-size:.83rem;margin-bottom:1rem;">${item.desc}</div>
+    <div style="background:rgba(245,197,24,.08);border:1px solid rgba(245,197,24,.2);padding:.75rem;border-radius:10px;">
+      <div style="font-size:.75rem;color:var(--sub);">СТОИМОСТЬ</div>
+      <div style="font-family:'Orbitron',sans-serif;font-size:1.6rem;font-weight:900;color:var(--gold);">⬡ ${item.price} TTFKA</div>
+    </div></div>`;
+  document.getElementById('confirmPurchaseBtn').onclick=async()=>{
+    profile.coins-=item.price;profile.ttfka_spent=(profile.ttfka_spent||0)+item.price;
+    if(!profile.purchases)profile.purchases=[];profile.purchases.push(itemId);
+    await sb.from('profiles').update({coins:profile.coins,ttfka_spent:profile.ttfka_spent,purchases:profile.purchases}).eq('id',profile.id);
+    renderUI();closeModal('purchaseModal');notify(`✅ Куплено: ${item.name}`);
+  };
+  document.getElementById('purchaseModal').classList.add('active');
+}
+
+function renderReferral(){
+  document.getElementById('refLink').textContent=`${SITE_URL}/battlepass.html?ref=${profile.ref_code||'—'}`;
+  document.getElementById('refCount').textContent=profile.ref_count||0;
+  document.getElementById('refEarned').textContent=profile.ref_earned||0;
+  const cnt=profile.ref_count||0;
+  document.getElementById('refRank').textContent=cnt>=10?'🥇 Легенда':cnt>=5?'🥈 Ветеран':cnt>=1?'🥉 Новичок':'—';
+}
+
+function copyRef(){navigator.clipboard.writeText(document.getElementById('refLink').textContent).then(()=>notify('✅ Ссылка скопирована!'));}
+
+function renderContent(){
+  if(!contentSubs.length){document.getElementById('myContentSubmissions').innerHTML='<div style="color:var(--sub);font-size:.83rem;">Заявок пока нет.</div>';return;}
+  const tl={youtube:'▶️',shorts:'📱',tiktok:'🎵',collab:'🤝'};
+  const tn={youtube:'YouTube',shorts:'Shorts',tiktok:'TikTok',collab:'Совместный'};
+  document.getElementById('myContentSubmissions').innerHTML=contentSubs.map(s=>`
+    <div class="submission-item">
+      <div class="sub-thumb">${tl[s.content_type]||'🎬'}</div>
+      <div class="sub-info">
+        <div class="sub-title">${tn[s.content_type]||s.content_type}</div>
+        <div class="sub-meta"><a href="${s.url}" target="_blank" style="color:var(--primary2);">${s.url.slice(0,50)}...</a></div>
+        ${s.reject_reason?`<div style="font-size:.73rem;color:var(--accent);margin-top:.2rem;">Причина: ${s.reject_reason}</div>`:''}
+      </div>
+      <div class="sub-status ss-${s.status}">${{pending:'⏳ На проверке',approved:`✅ +${s.reward_ttfka||0} TTFKA`,rejected:'❌ Отклонено'}[s.status]}</div>
+    </div>`).join('');
+}
+
+async function submitContent(){
+  const type=document.getElementById('contentType').value;
+  const url=document.getElementById('contentUrl').value.trim();
+  const desc=document.getElementById('contentDesc').value.trim();
+  if(!url){notify('❌ Введи ссылку');return;}
+  if(!url.startsWith('http')){notify('❌ Неверная ссылка');return;}
+  const {data,error}=await sb.from('content_submissions').insert({
+    user_id:profile.id,username:profile.username,content_type:type,url,description:desc,status:'pending',reward_ttfka:0
+  }).select().single();
+  if(error){notify('❌ Ошибка: '+error.message);return;}
+  contentSubs.unshift(data);
+  document.getElementById('contentUrl').value='';document.getElementById('contentDesc').value='';
+  sendEmail(`🎬 Контент от ${profile.username}`,`Тип: ${type}<br>Ссылка: <a href="${url}">${url}</a><br>Описание: ${desc||'—'}`);
+  notify('📤 Ролик отправлен на проверку!');renderContent();
+}
+
+function renderBalance(){
+  document.getElementById('balTTFKA').textContent=(profile.coins||0).toLocaleString();
+  document.getElementById('balSpent').textContent=(profile.ttfka_spent||0).toLocaleString();
+  document.getElementById('balEarned').textContent=(profile.ttfka_earned||0).toLocaleString();
+}
+
+async function sendEmail(subject,body){
+  try{await fetch('https://api.resend.com/emails',{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${RESEND_KEY}`},body:JSON.stringify({from:'battlepass@resend.dev',to:ADMIN_EMAIL,subject,html:`<div style="font-family:Arial;background:#07070f;color:#fff;padding:2rem;border-radius:12px;max-width:500px;"><h2 style="color:#7c5cfc;">⚔️ TTFHub</h2>${body}<br><a href="${SITE_URL}/admin.html" style="display:inline-block;background:linear-gradient(135deg,#7c5cfc,#fc5c7d);color:#fff;padding:.75rem 1.5rem;border-radius:8px;text-decoration:none;font-weight:bold;margin-top:1rem;">Открыть панель</a></div>`})});}catch(e){}
+}
+
+function notify(msg){const n=document.createElement('div');n.className='notif';n.textContent=msg;document.body.appendChild(n);setTimeout(()=>n.remove(),3500);}
+function closeModal(id){document.getElementById(id).classList.remove('active');}
+function showApp(){document.getElementById('authOverlay').classList.add('hidden');document.getElementById('app').classList.add('visible');renderUI();}
+function showAuth(){document.getElementById('authOverlay').classList.remove('hidden');document.getElementById('app').classList.remove('visible');}
+
+// Handle ref code from URL
+const urlRef=new URLSearchParams(location.search).get('ref');
+if(urlRef)document.getElementById('regRef').value=urlRef;
+
+init();
+</script>
+</body>
+</html>
