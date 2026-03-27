@@ -459,7 +459,69 @@
         document.getElementById('page-' + id).classList.add('active');
         event.target.classList.add('active');
     }
+<script>
+// ====== SHOP ======
+let editableShop = [];
 
+const defaultShop = [
+  { id:'s1', icon:'💎', name:'VIP', desc:'VIP доступ', price:500 },
+  { id:'s2', icon:'🔥', name:'Буст XP', desc:'+50% XP', price:300 }
+];
+
+async function loadShop() {
+  try {
+    const { data } = await sb.from('site_config').select('value').eq('key','shop').single();
+    editableShop = data?.value ? (typeof data.value === 'string' ? JSON.parse(data.value) : data.value) : defaultShop.slice();
+  } catch(e) {
+    console.log('shop load error', e);
+    editableShop = defaultShop.slice();
+  }
+  renderShopEditor();
+}
+
+function renderShopEditor() {
+  const el = document.getElementById('shopEditor');
+  if(!el) return;
+  if(!editableShop.length){ el.innerHTML='<div>Нет наград</div>'; return; }
+  el.innerHTML = editableShop.map((item,i)=>`
+    <div class="task-edit-card">
+      <div class="task-edit-fields">
+        <input value="${item.icon}" onchange="editableShop[${i}].icon=this.value">
+        <input value="${item.name}" onchange="editableShop[${i}].name=this.value">
+        <input value="${item.desc}" onchange="editableShop[${i}].desc=this.value">
+        <input type="number" value="${item.price||0}" onchange="editableShop[${i}].price=parseInt(this.value)||0">
+        <button onclick="deleteShopItem(${i})">🗑️</button>
+      </div>
+    </div>`).join('');
+}
+
+function addShopItem() {
+  editableShop.push({ id:'s'+Date.now(), icon:'🎁', name:'Награда', desc:'Описание', price:100 });
+  renderShopEditor();
+}
+
+function deleteShopItem(i) {
+  editableShop.splice(i,1);
+  renderShopEditor();
+}
+
+async function saveShop() {
+  const { error } = await sb.from('site_config').upsert({ key:'shop', value:editableShop }, { onConflict:'key' });
+  if(error){ console.log(error); showToast('❌ Ошибка'); return; }
+  showToast('✅ Магазин сохранён');
+}
+</script>
+
+<script>
+  // ====== потом уже вызываем loadAll ======
+  async function loadAll() {
+    await loadShop(); // теперь точно определено
+    // другие загрузки
+  }
+
+  checkSession(); // где вызывается loadAll
+</script>
+    
     // ===== LOAD ALL =====
     async function loadAll() {
         await loadSubmissions();
