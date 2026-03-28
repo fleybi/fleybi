@@ -920,28 +920,55 @@
     }
 
     function renderTasksEditor() {
-        document.getElementById('tasksEditor').innerHTML = editableTasks.map((t, i) => `
-            <div class="task-edit-card">
-                <div class="task-edit-row">
-                    <div class="task-edit-fields">
-                        <input class="edit-input" placeholder="Иконка (emoji)" value="${t.icon || '🎯'}"
-                            oninput="editableTasks[${i}].icon=this.value">
-                        <input class="edit-input" placeholder="Название задания" value="${(t.name || '').replace(/"/g,'&quot;')}"
-                            oninput="editableTasks[${i}].name=this.value">
-                        <input class="edit-input full" placeholder="Описание задания" value="${(t.desc || '').replace(/"/g,'&quot;')}"
-                            oninput="editableTasks[${i}].desc=this.value">
-                        <input class="edit-input" type="number" placeholder="XP награда" value="${t.xp || ''}"
-                            oninput="editableTasks[${i}].xp=parseInt(this.value)||0">
-                        <input class="edit-input" type="number" placeholder="Coins награда" value="${t.coins || ''}"
-                            oninput="editableTasks[${i}].coins=parseInt(this.value)||0">
-                    </div>
-                    <div class="task-edit-actions">
-                        <button class="btn-del" onclick="deleteTask(${i})">🗑️ Удалить</button>
-                    </div>
+    document.getElementById('tasksEditor').innerHTML = editableTasks.map((t, i) => {
+        const icon = t?.icon || '🎯';
+        const name = (t?.name || '').replace(/"/g, '&quot;');
+        const desc = (t?.desc || '').replace(/"/g, '&quot;');
+        const xp = Number(t?.xp) || 0;
+        const coins = Number(t?.coins) || 0;
+
+        return `
+        <div class="task-edit-card">
+            <div class="task-edit-row">
+                <div class="task-edit-fields">
+
+                    <input class="edit-input"
+                        placeholder="Иконка (emoji)"
+                        value="${icon}"
+                        oninput="editableTasks[${i}].icon=this.value">
+
+                    <input class="edit-input"
+                        placeholder="Название задания"
+                        value="${name}"
+                        oninput="editableTasks[${i}].name=this.value">
+
+                    <input class="edit-input full"
+                        placeholder="Описание задания"
+                        value="${desc}"
+                        oninput="editableTasks[${i}].desc=this.value">
+
+                    <input class="edit-input"
+                        type="number"
+                        placeholder="XP награда"
+                        value="${xp}"
+                        oninput="editableTasks[${i}].xp=parseInt(this.value)||0">
+
+                    <input class="edit-input"
+                        type="number"
+                        placeholder="Coins награда"
+                        value="${coins}"
+                        oninput="editableTasks[${i}].coins=parseInt(this.value)||0">
+
+                </div>
+
+                <div class="task-edit-actions">
+                    <button class="btn-del" onclick="deleteTask(${i})">🗑️ Удалить</button>
                 </div>
             </div>
-        `).join('');
-    }
+        </div>
+        `;
+    }).join('');
+}
 
     function addNewTask() {
         const newId = 't' + Date.now();
