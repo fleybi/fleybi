@@ -1,0 +1,1167 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TTFHub — Клановая Система</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Syne:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --bg:#07070f;--surface:#0d0d1a;--surface2:#111122;--border:rgba(255,255,255,0.06);
+  --primary:#7c5cfc;--primary2:#a78bfa;--accent:#fc5c7d;--gold:#f5c518;
+  --cyan:#00e5ff;--green:#00e676;--text:#e8e8f0;--sub:#5a5a7a;
+}
+html{scroll-behavior:smooth;}
+body{font-family:'Syne',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
+body::before{content:'';position:fixed;inset:0;
+  background:
+    radial-gradient(ellipse 50% 35% at 0% 0%,rgba(124,92,252,.09) 0%,transparent 60%),
+    radial-gradient(ellipse 40% 50% at 100% 100%,rgba(252,92,125,.06) 0%,transparent 60%),
+    radial-gradient(ellipse 30% 40% at 50% 50%,rgba(0,229,255,.03) 0%,transparent 70%);
+  pointer-events:none;z-index:0;}
+
+/* grid lines subtle bg */
+body::after{content:'';position:fixed;inset:0;
+  background-image:linear-gradient(rgba(124,92,252,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(124,92,252,.025) 1px,transparent 1px);
+  background-size:60px 60px;pointer-events:none;z-index:0;}
+
+/* LOADING */
+#loadingScreen{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2rem;z-index:9999;}
+.loading-illustration{width:120px;height:120px;position:relative;}
+.loading-illustration svg{animation:loadSpin 2s ease-in-out infinite;}
+@keyframes loadSpin{0%,100%{transform:rotate(0deg) scale(1);}50%{transform:rotate(180deg) scale(1.05);}}
+#loadingScreen .logo{font-family:'Orbitron',sans-serif;font-size:1.8rem;font-weight:900;letter-spacing:.5rem;background:linear-gradient(135deg,var(--primary),var(--accent));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+#loadingScreen .load-sub{font-size:.72rem;color:var(--sub);letter-spacing:.25rem;margin-top:-.5rem;}
+.loader-dots{display:flex;gap:.4rem;}
+.loader-dots span{width:6px;height:6px;border-radius:50%;background:var(--primary);animation:dotPulse 1.2s ease-in-out infinite;}
+.loader-dots span:nth-child(2){animation-delay:.2s;background:var(--primary2);}
+.loader-dots span:nth-child(3){animation-delay:.4s;background:var(--accent);}
+@keyframes dotPulse{0%,100%{transform:scale(1);opacity:.4;}50%{transform:scale(1.5);opacity:1;}}
+
+/* AUTH */
+.auth-overlay{position:fixed;inset:0;background:rgba(7,7,15,.97);display:flex;align-items:center;justify-content:center;z-index:1000;backdrop-filter:blur(20px);}
+.auth-overlay.hidden{display:none;}
+.auth-box{background:var(--surface);border:1px solid var(--border);border-radius:24px;padding:2.5rem;width:90%;max-width:400px;box-shadow:0 0 100px rgba(124,92,252,.12);position:relative;overflow:hidden;}
+.auth-box::before{content:'';position:absolute;top:-80px;right:-80px;width:200px;height:200px;background:radial-gradient(circle,rgba(124,92,252,.1),transparent 70%);pointer-events:none;}
+.auth-box::after{content:'';position:absolute;bottom:-60px;left:-60px;width:160px;height:160px;background:radial-gradient(circle,rgba(252,92,125,.07),transparent 70%);pointer-events:none;}
+.auth-illustration{display:flex;justify-content:center;margin-bottom:1.5rem;}
+.auth-logo{font-family:'Orbitron',sans-serif;font-size:1.9rem;font-weight:900;letter-spacing:.35rem;text-align:center;margin-bottom:.3rem;background:linear-gradient(135deg,var(--primary),var(--accent));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.auth-sub{text-align:center;color:var(--sub);font-size:.75rem;margin-bottom:2rem;letter-spacing:.12rem;text-transform:uppercase;}
+.auth-tabs{display:flex;background:rgba(255,255,255,.03);border-radius:12px;padding:4px;margin-bottom:1.5rem;border:1px solid var(--border);}
+.auth-tab{flex:1;padding:.55rem;border:none;background:none;color:var(--sub);cursor:pointer;font-family:'Syne',sans-serif;font-size:.85rem;border-radius:9px;transition:all .3s;font-weight:600;}
+.auth-tab.active{background:linear-gradient(135deg,rgba(124,92,252,.25),rgba(252,92,125,.15));color:var(--primary2);border:1px solid rgba(124,92,252,.2);}
+.auth-form{display:none;flex-direction:column;gap:.85rem;}
+.auth-form.active{display:flex;animation:fadeUp .3s ease;}
+.inp{background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:12px;padding:.78rem 1rem;color:var(--text);font-family:'Syne',sans-serif;font-size:.88rem;transition:all .3s;width:100%;}
+.inp:focus{outline:none;border-color:rgba(124,92,252,.5);background:rgba(124,92,252,.05);box-shadow:0 0 0 3px rgba(124,92,252,.08);}
+.inp::placeholder{color:var(--sub);}
+.auth-btn-main{background:linear-gradient(135deg,var(--primary),var(--accent));border:none;color:#fff;padding:.85rem;border-radius:12px;cursor:pointer;font-family:'Orbitron',sans-serif;font-size:.82rem;font-weight:700;letter-spacing:.12rem;transition:all .3s;position:relative;overflow:hidden;}
+.auth-btn-main::after{content:'';position:absolute;inset:0;background:linear-gradient(135deg,transparent,rgba(255,255,255,.08));pointer-events:none;}
+.auth-btn-main:hover{transform:translateY(-2px);box-shadow:0 10px 35px rgba(124,92,252,.45);}
+.auth-btn-main:disabled{opacity:.5;cursor:not-allowed;transform:none;}
+.auth-msg{padding:.65rem;border-radius:10px;font-size:.82rem;text-align:center;display:none;}
+.auth-msg.err{background:rgba(252,92,125,.08);border:1px solid rgba(252,92,125,.25);color:var(--accent);display:block;}
+.auth-msg.ok{background:rgba(0,230,118,.08);border:1px solid rgba(0,230,118,.25);color:var(--green);display:block;}
+
+/* LAYOUT */
+.app{display:none;}
+.app.visible{display:flex;min-height:100vh;}
+
+/* SIDEBAR */
+.sidebar{width:250px;min-height:100vh;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;left:0;top:0;bottom:0;z-index:50;transition:transform .3s ease;}
+.sidebar-logo{padding:1.6rem 1.4rem 1.1rem;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:.9rem;}
+.sidebar-logo-icon{width:36px;height:36px;flex-shrink:0;}
+.sidebar-logo .logo-text{font-family:'Orbitron',sans-serif;font-size:1rem;font-weight:900;letter-spacing:.2rem;background:linear-gradient(135deg,var(--primary),var(--accent));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.sidebar-logo .logo-sub{font-size:.6rem;color:var(--sub);letter-spacing:.1rem;margin-top:.15rem;text-transform:uppercase;}
+.user-panel{padding:1.1rem 1.4rem;border-bottom:1px solid var(--border);}
+.user-avatar{width:44px;height:44px;border-radius:14px;background:linear-gradient(135deg,var(--primary),var(--accent));display:flex;align-items:center;justify-content:center;font-size:1.1rem;font-weight:700;margin-bottom:.65rem;font-family:'Orbitron',sans-serif;box-shadow:0 4px 20px rgba(124,92,252,.3);}
+.user-name-side{font-size:.9rem;font-weight:700;margin-bottom:.25rem;}
+.user-ttfka{font-size:.76rem;color:var(--gold);display:flex;align-items:center;gap:.4rem;font-weight:600;}
+.ttfka-icon{width:14px;height:14px;}
+.nav{flex:1;padding:.75rem 0;overflow-y:auto;}
+.nav::-webkit-scrollbar{width:0;}
+.nav-section-label{font-size:.6rem;letter-spacing:.2rem;color:var(--sub);padding:.6rem 1.4rem .3rem;text-transform:uppercase;}
+.nav-item{display:flex;align-items:center;gap:.8rem;padding:.72rem 1.4rem;cursor:pointer;color:var(--sub);font-size:.86rem;font-weight:600;transition:all .25s;border-left:2px solid transparent;position:relative;}
+.nav-item:hover{color:var(--text);background:rgba(255,255,255,.025);}
+.nav-item.active{color:var(--primary2);background:rgba(124,92,252,.07);border-left-color:var(--primary);}
+.nav-icon{width:18px;height:18px;flex-shrink:0;}
+.nav-badge{margin-left:auto;background:var(--accent);color:#fff;font-size:.6rem;padding:.15rem .45rem;border-radius:20px;font-weight:700;}
+.sidebar-footer{padding:1rem 1.4rem;border-top:1px solid var(--border);}
+.logout-btn-side{width:100%;background:rgba(252,92,125,.06);border:1px solid rgba(252,92,125,.15);color:var(--accent);padding:.6rem;border-radius:10px;cursor:pointer;font-family:'Syne',sans-serif;font-size:.82rem;font-weight:600;transition:all .3s;display:flex;align-items:center;justify-content:center;gap:.5rem;}
+.logout-btn-side:hover{background:rgba(252,92,125,.12);border-color:rgba(252,92,125,.3);}
+
+/* MAIN */
+.main{margin-left:250px;flex:1;padding:2rem 2.25rem;position:relative;z-index:1;}
+.page{display:none;}
+.page.active{display:block;animation:fadeUp .35s ease;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:translateY(0);}}
+.page-header{margin-bottom:2rem;display:flex;align-items:flex-end;justify-content:space-between;}
+.page-header-left{}
+.page-title{font-family:'Orbitron',sans-serif;font-size:1.35rem;font-weight:700;letter-spacing:.08rem;margin-bottom:.3rem;}
+.page-sub{color:var(--sub);font-size:.82rem;font-weight:500;}
+.page-header-art{width:60px;height:60px;opacity:.7;}
+
+/* CARDS */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:1.6rem;position:relative;overflow:hidden;}
+.card-glow{position:absolute;top:0;right:0;width:150px;height:150px;background:radial-gradient(circle,rgba(124,92,252,.06),transparent 70%);pointer-events:none;}
+
+/* STATS */
+.stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1rem;margin-bottom:2rem;}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:1.3rem;position:relative;overflow:hidden;transition:border-color .3s,transform .3s;}
+.stat-card:hover{border-color:rgba(124,92,252,.2);transform:translateY(-2px);}
+.stat-card-art{position:absolute;bottom:-8px;right:-8px;width:60px;height:60px;opacity:.15;}
+.stat-label{font-size:.68rem;color:var(--sub);letter-spacing:.1rem;text-transform:uppercase;margin-bottom:.5rem;font-weight:600;}
+.stat-val{font-family:'Orbitron',sans-serif;font-size:1.55rem;font-weight:700;background:linear-gradient(135deg,var(--primary2),var(--accent));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.stat-val.gold{background:linear-gradient(135deg,var(--gold),#ff9800);-webkit-background-clip:text;background-clip:text;}
+.stat-val.green{background:linear-gradient(135deg,var(--green),var(--cyan));-webkit-background-clip:text;background-clip:text;}
+
+/* LEVEL */
+.level-bar-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:.65rem;}
+.level-label{font-size:.77rem;color:var(--sub);font-weight:600;}
+.level-num{font-family:'Orbitron',sans-serif;font-size:.88rem;color:var(--primary2);}
+.level-bar{background:rgba(255,255,255,.05);border-radius:10px;height:8px;overflow:hidden;border:1px solid rgba(255,255,255,.04);}
+.level-fill{height:100%;background:linear-gradient(90deg,var(--primary),var(--accent));border-radius:10px;transition:width .9s cubic-bezier(.4,0,.2,1);position:relative;}
+.level-fill::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.15),transparent);animation:shimmer 2s infinite;}
+@keyframes shimmer{0%{transform:translateX(-100%);}100%{transform:translateX(100%);}}
+
+/* PROFILE */
+.profile-card{display:grid;grid-template-columns:auto 1fr;gap:1.75rem;align-items:center;background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:2rem;margin-bottom:1.5rem;position:relative;overflow:hidden;}
+.profile-card::before{content:'';position:absolute;top:-60px;right:-60px;width:220px;height:220px;background:radial-gradient(circle,rgba(124,92,252,.07),transparent 70%);pointer-events:none;}
+.profile-avatar-big{width:76px;height:76px;border-radius:20px;background:linear-gradient(135deg,var(--primary),var(--accent));display:flex;align-items:center;justify-content:center;font-family:'Orbitron',sans-serif;font-size:1.7rem;font-weight:900;box-shadow:0 0 35px rgba(124,92,252,.35);}
+.profile-info h2{font-size:1.25rem;font-weight:700;margin-bottom:.3rem;}
+.profile-email{font-size:.8rem;color:var(--sub);margin-bottom:.6rem;font-weight:500;}
+.profile-badges{display:flex;gap:.5rem;flex-wrap:wrap;}
+.badge{font-size:.68rem;padding:.25rem .7rem;border-radius:20px;font-weight:700;letter-spacing:.04rem;}
+.badge-level{background:rgba(124,92,252,.12);color:var(--primary2);border:1px solid rgba(124,92,252,.2);}
+.badge-ttfka{background:rgba(245,197,24,.09);color:var(--gold);border:1px solid rgba(245,197,24,.18);}
+
+/* REWARDS PASS */
+.rewards-grid-pass{display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:.75rem;margin-top:1.6rem;}
+.reward-pass-item{background:rgba(0,0,0,.25);border:1px solid var(--border);border-radius:12px;padding:1rem;text-align:center;transition:all .3s;}
+.reward-pass-item.unlocked{border-color:rgba(124,92,252,.3);background:rgba(124,92,252,.06);}
+.reward-pass-item.locked{opacity:.4;}
+.rp-icon{width:36px;height:36px;margin:0 auto .5rem;}
+.rp-name{font-size:.7rem;color:var(--text);margin-bottom:.25rem;font-weight:600;}
+.rp-lvl{font-size:.62rem;color:var(--primary2);font-weight:700;}
+
+/* TASKS */
+.tasks-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1.25rem;}
+.task-card{background:var(--surface);border:1px solid var(--border);border-radius:18px;overflow:hidden;transition:all .35s cubic-bezier(.4,0,.2,1);position:relative;}
+.task-card:hover{transform:translateY(-5px);border-color:rgba(124,92,252,.25);box-shadow:0 20px 50px rgba(0,0,0,.45),0 0 30px rgba(124,92,252,.07);}
+.task-inner{padding:1.5rem;}
+.task-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1.1rem;}
+.task-icon-wrap{width:48px;height:48px;border-radius:14px;background:linear-gradient(135deg,rgba(124,92,252,.15),rgba(252,92,125,.1));border:1px solid rgba(124,92,252,.18);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.task-status{font-size:.62rem;padding:.25rem .65rem;border-radius:20px;font-weight:700;letter-spacing:.06rem;text-transform:uppercase;}
+.s-active{background:rgba(124,92,252,.1);color:var(--primary2);border:1px solid rgba(124,92,252,.18);}
+.s-pending{background:rgba(245,197,24,.08);color:var(--gold);border:1px solid rgba(245,197,24,.18);}
+.s-approved{background:rgba(0,230,118,.08);color:var(--green);border:1px solid rgba(0,230,118,.18);}
+.s-rejected{background:rgba(252,92,125,.08);color:var(--accent);border:1px solid rgba(252,92,125,.18);}
+.task-name{font-weight:700;font-size:.98rem;margin-bottom:.35rem;}
+.task-desc{font-size:.79rem;color:var(--sub);line-height:1.55;margin-bottom:1.1rem;}
+.task-rewards{display:flex;gap:.6rem;margin-bottom:1.1rem;}
+.reward-pill{display:flex;align-items:center;gap:.35rem;background:rgba(255,255,255,.035);border:1px solid var(--border);border-radius:8px;padding:.3rem .65rem;font-size:.77rem;}
+.reward-pill .rval{font-weight:700;color:#fff;}
+.reward-pill svg{width:12px;height:12px;flex-shrink:0;}
+.task-divider{height:1px;background:var(--border);margin-bottom:1.1rem;}
+.task-btn{width:100%;padding:.75rem;border-radius:11px;border:none;font-family:'Syne',sans-serif;font-size:.86rem;font-weight:700;cursor:pointer;transition:all .3s;}
+.tb-submit{background:linear-gradient(135deg,var(--primary),var(--accent));color:#fff;}
+.tb-submit:hover{transform:translateY(-1px);box-shadow:0 8px 25px rgba(124,92,252,.4);}
+.tb-pending{background:rgba(245,197,24,.07);border:1px solid rgba(245,197,24,.18);color:var(--gold);cursor:not-allowed;}
+.tb-approved{background:rgba(0,230,118,.07);border:1px solid rgba(0,230,118,.18);color:var(--green);cursor:not-allowed;}
+.tb-rejected{background:rgba(252,92,125,.07);border:1px solid rgba(252,92,125,.18);color:var(--accent);cursor:pointer;}
+.tb-rejected:hover{background:rgba(252,92,125,.14);}
+.reject-reason{margin-top:.5rem;font-size:.73rem;color:var(--accent);}
+
+/* DAILY */
+.daily-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:1.25rem;margin-bottom:2rem;}
+.daily-card{background:var(--surface);border:1px solid var(--border);border-radius:20px;overflow:hidden;cursor:pointer;transition:all .4s cubic-bezier(.4,0,.2,1);position:relative;aspect-ratio:3/4;display:flex;align-items:center;justify-content:center;}
+.daily-card:hover:not(.opened):not(.claimed){transform:translateY(-10px) scale(1.02);border-color:rgba(124,92,252,.4);box-shadow:0 30px 60px rgba(0,0,0,.5),0 0 50px rgba(124,92,252,.12);}
+.daily-card .card-back{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.75rem;background:linear-gradient(160deg,#0d0d1a 0%,#13132a 100%);}
+.card-back-art{width:70px;height:70px;}
+.tap-hint{font-size:.65rem;color:var(--sub);letter-spacing:.15rem;text-transform:uppercase;font-weight:600;}
+.daily-card.claimed{cursor:not-allowed;opacity:.45;}
+.daily-card .card-front{display:none;position:absolute;inset:0;flex-direction:column;align-items:center;justify-content:center;gap:1rem;padding:1.5rem;text-align:center;}
+.daily-card.opened .card-back{display:none;}
+.daily-card.opened .card-front{display:flex;animation:cardFlip .5s cubic-bezier(.4,0,.2,1);}
+@keyframes cardFlip{from{opacity:0;transform:scale(.75) rotateY(20deg);}to{opacity:1;transform:scale(1) rotateY(0deg);}}
+.rarity-common.opened .card-front{background:linear-gradient(160deg,#12122a,#1a1a35);}
+.rarity-rare.opened .card-front{background:linear-gradient(160deg,#0a1e38,#0d2040);}
+.rarity-epic.opened .card-front{background:linear-gradient(160deg,#1e0f40,#250f48);}
+.rarity-mythic.opened .card-front{background:linear-gradient(160deg,#400f20,#480f28);}
+.rarity-common{border-color:rgba(124,92,252,.25);}
+.rarity-rare{border-color:rgba(0,229,255,.35);}
+.rarity-epic{border-color:rgba(168,85,247,.45);}
+.rarity-mythic{border-color:rgba(252,92,125,.55);box-shadow:0 0 40px rgba(252,92,125,.18);}
+.card-reward-icon{width:56px;height:56px;}
+.card-reward-name{font-weight:700;font-size:.95rem;}
+.card-reward-amount{font-family:'Orbitron',sans-serif;font-size:1.35rem;font-weight:900;color:var(--gold);}
+.rarity-tag{font-size:.62rem;padding:.22rem .62rem;border-radius:20px;font-weight:700;letter-spacing:.08rem;text-transform:uppercase;}
+.rt-common{background:rgba(124,92,252,.14);color:var(--primary2);}
+.rt-rare{background:rgba(0,229,255,.09);color:var(--cyan);}
+.rt-epic{background:rgba(168,85,247,.14);color:#c084fc;}
+.rt-mythic{background:rgba(252,92,125,.14);color:var(--accent);}
+.rarity-legend{display:grid;grid-template-columns:repeat(4,1fr);gap:.75rem;margin-top:1.5rem;}
+.rarity-item{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1rem;text-align:center;}
+.rarity-item-name{font-size:.8rem;font-weight:700;margin-bottom:.3rem;}
+.rarity-item-desc{font-size:.7rem;color:var(--sub);line-height:1.4;}
+
+/* SHOP */
+.shop-filters{display:flex;gap:.6rem;margin-bottom:1.5rem;flex-wrap:wrap;}
+.filter-btn{background:rgba(255,255,255,.035);border:1px solid var(--border);color:var(--sub);padding:.4rem 1rem;border-radius:20px;cursor:pointer;font-size:.8rem;transition:all .3s;font-family:'Syne',sans-serif;font-weight:600;display:flex;align-items:center;gap:.4rem;}
+.filter-btn svg{width:14px;height:14px;}
+.filter-btn.active{background:rgba(124,92,252,.12);border-color:rgba(124,92,252,.35);color:var(--primary2);}
+.shop-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(185px,1fr));gap:1rem;}
+.shop-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:1.3rem;text-align:center;transition:all .3s;position:relative;overflow:hidden;}
+.shop-card:hover{border-color:rgba(252,92,125,.25);transform:translateY(-4px);box-shadow:0 15px 40px rgba(0,0,0,.35);}
+.shop-icon-wrap{width:60px;height:60px;margin:0 auto .75rem;}
+.shop-name{font-weight:700;font-size:.9rem;margin-bottom:.3rem;}
+.shop-desc{font-size:.72rem;color:var(--sub);margin-bottom:.9rem;line-height:1.45;min-height:2rem;}
+.shop-price{display:flex;align-items:center;justify-content:center;gap:.4rem;font-family:'Orbitron',sans-serif;font-size:.95rem;font-weight:700;color:var(--gold);margin-bottom:.75rem;}
+.shop-price svg{width:16px;height:16px;}
+.shop-btn{width:100%;background:linear-gradient(135deg,var(--accent),#ff1744);border:none;color:#fff;padding:.62rem;border-radius:9px;cursor:pointer;font-family:'Syne',sans-serif;font-size:.84rem;font-weight:700;transition:all .3s;}
+.shop-btn:hover{transform:translateY(-2px);box-shadow:0 8px 22px rgba(252,92,125,.3);}
+
+/* REFERRAL */
+.ref-link-box{background:rgba(124,92,252,.05);border:1px solid rgba(124,92,252,.18);border-radius:14px;padding:1.1rem 1.3rem;display:flex;align-items:center;gap:1rem;margin-bottom:1.5rem;flex-wrap:wrap;}
+.ref-link-icon{width:32px;height:32px;flex-shrink:0;}
+.ref-link{flex:1;font-size:.79rem;color:var(--primary2);word-break:break-all;min-width:0;font-weight:600;}
+.copy-btn{background:rgba(124,92,252,.12);border:1px solid rgba(124,92,252,.25);color:var(--primary2);padding:.45rem 1rem;border-radius:9px;cursor:pointer;font-size:.8rem;white-space:nowrap;transition:all .3s;font-family:'Syne',sans-serif;font-weight:700;display:flex;align-items:center;gap:.4rem;}
+.copy-btn svg{width:14px;height:14px;}
+.copy-btn:hover{background:rgba(124,92,252,.2);}
+.ref-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:1.5rem;}
+.ref-stat{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:1.3rem;text-align:center;position:relative;overflow:hidden;}
+.ref-stat-art{position:absolute;bottom:-10px;right:-10px;width:50px;height:50px;opacity:.1;}
+.ref-stat-val{font-family:'Orbitron',sans-serif;font-size:1.45rem;font-weight:700;color:var(--primary2);margin-bottom:.3rem;}
+.ref-stat-label{font-size:.72rem;color:var(--sub);font-weight:600;}
+
+/* CONTENT */
+.content-form{background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:1.75rem;margin-bottom:1.5rem;position:relative;overflow:hidden;}
+.content-form::before{content:'';position:absolute;top:-40px;right:-40px;width:150px;height:150px;background:radial-gradient(circle,rgba(124,92,252,.06),transparent 70%);pointer-events:none;}
+.content-form-header{display:flex;align-items:center;gap:.75rem;margin-bottom:.4rem;}
+.content-form-header svg{width:28px;height:28px;}
+.content-form h3{font-size:1rem;font-weight:700;}
+.content-form p{font-size:.82rem;color:var(--sub);margin-bottom:1.5rem;line-height:1.6;margin-left:3rem;}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;}
+.form-group{display:flex;flex-direction:column;gap:.4rem;}
+.form-label{font-size:.72rem;color:var(--sub);letter-spacing:.06rem;text-transform:uppercase;font-weight:700;}
+.form-inp{background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:11px;padding:.72rem 1rem;color:var(--text);font-family:'Syne',sans-serif;font-size:.86rem;transition:all .3s;width:100%;}
+.form-inp:focus{outline:none;border-color:rgba(124,92,252,.4);background:rgba(124,92,252,.04);box-shadow:0 0 0 3px rgba(124,92,252,.07);}
+.form-inp::placeholder{color:var(--sub);}
+select.form-inp option{background:#1a1a2e;}
+.submit-content-btn{background:linear-gradient(135deg,var(--primary),var(--accent));border:none;color:#fff;padding:.82rem 2rem;border-radius:11px;cursor:pointer;font-family:'Syne',sans-serif;font-size:.88rem;font-weight:700;transition:all .3s;display:flex;align-items:center;gap:.5rem;}
+.submit-content-btn svg{width:18px;height:18px;}
+.submit-content-btn:hover{transform:translateY(-2px);box-shadow:0 8px 28px rgba(124,92,252,.42);}
+.content-rules{background:rgba(245,197,24,.04);border:1px solid rgba(245,197,24,.13);border-radius:14px;padding:1.3rem;}
+.content-rules-header{display:flex;align-items:center;gap:.6rem;margin-bottom:.8rem;}
+.content-rules-header svg{width:20px;height:20px;}
+.content-rules h4{color:var(--gold);font-size:.9rem;font-weight:700;}
+.content-rules ul{list-style:none;display:flex;flex-direction:column;gap:.5rem;}
+.content-rules li{font-size:.81rem;color:var(--sub);padding-left:1.1rem;position:relative;line-height:1.5;}
+.content-rules li::before{content:'';position:absolute;left:0;top:.55rem;width:5px;height:5px;border-radius:50%;background:var(--gold);}
+.my-submissions{margin-top:1.5rem;}
+.submissions-header{font-weight:700;margin-bottom:1rem;font-size:.95rem;}
+.submission-item{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:1rem 1.25rem;display:flex;align-items:center;gap:1rem;margin-bottom:.75rem;flex-wrap:wrap;transition:border-color .3s;}
+.submission-item:hover{border-color:rgba(124,92,252,.18);}
+.sub-thumb{width:48px;height:48px;border-radius:10px;background:rgba(124,92,252,.08);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.sub-thumb svg{width:24px;height:24px;}
+.sub-info{flex:1;min-width:0;}
+.sub-title{font-weight:700;font-size:.87rem;margin-bottom:.2rem;}
+.sub-meta{font-size:.73rem;color:var(--sub);}
+.sub-status{font-size:.73rem;padding:.22rem .62rem;border-radius:20px;font-weight:700;white-space:nowrap;display:flex;align-items:center;gap:.3rem;}
+.sub-status svg{width:12px;height:12px;}
+.ss-pending{background:rgba(245,197,24,.08);color:var(--gold);border:1px solid rgba(245,197,24,.18);}
+.ss-approved{background:rgba(0,230,118,.08);color:var(--green);border:1px solid rgba(0,230,118,.18);}
+.ss-rejected{background:rgba(252,92,125,.08);color:var(--accent);border:1px solid rgba(252,92,125,.18);}
+
+/* NOTIFICATION */
+.notif{position:fixed;bottom:2rem;right:2rem;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:1rem 1.4rem;border-radius:16px;box-shadow:0 12px 50px rgba(0,0,0,.55);animation:slideInRight .4s cubic-bezier(.4,0,.2,1);z-index:9999;max-width:300px;font-size:.87rem;font-weight:600;display:flex;align-items:center;gap:.75rem;}
+.notif-icon{width:28px;height:28px;flex-shrink:0;}
+@keyframes slideInRight{from{transform:translateX(350px);opacity:0;}to{transform:translateX(0);opacity:1;}}
+
+/* MODAL */
+.modal{display:none;position:fixed;inset:0;background:rgba(7,7,15,.93);z-index:800;align-items:center;justify-content:center;backdrop-filter:blur(18px);}
+.modal.active{display:flex;animation:fadeUp .3s ease;}
+.modal-box{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:2.1rem;width:90%;max-width:430px;position:relative;overflow:hidden;}
+.modal-box::before{content:'';position:absolute;top:-50px;right:-50px;width:180px;height:180px;background:radial-gradient(circle,rgba(124,92,252,.08),transparent 70%);pointer-events:none;}
+.modal-title{font-family:'Orbitron',sans-serif;font-size:1.05rem;font-weight:700;margin-bottom:1.5rem;}
+.modal-actions{display:flex;gap:.75rem;margin-top:1.5rem;}
+.modal-btn{flex:1;padding:.78rem;border-radius:11px;border:none;cursor:pointer;font-family:'Syne',sans-serif;font-size:.87rem;font-weight:700;transition:all .3s;}
+.modal-btn-confirm{background:linear-gradient(135deg,var(--primary),var(--accent));color:#fff;}
+.modal-btn-confirm:hover{transform:translateY(-1px);box-shadow:0 8px 25px rgba(124,92,252,.4);}
+.modal-btn-cancel{background:rgba(255,255,255,.05);color:var(--sub);border:1px solid var(--border);}
+
+/* ADMIN BANNER */
+#adminBanner{display:none;position:fixed;top:0;left:0;right:0;z-index:9000;padding:.7rem 1.25rem;align-items:center;justify-content:space-between;gap:1rem;font-size:.88rem;font-family:'Syne',sans-serif;}
+#adminBanner.type-info{background:linear-gradient(90deg,rgba(102,126,234,.95),rgba(118,75,162,.95));color:#fff;border-bottom:1px solid rgba(102,126,234,.4);}
+#adminBanner.type-warn{background:linear-gradient(90deg,rgba(200,120,0,.97),rgba(180,100,0,.95));color:#fff;border-bottom:1px solid rgba(255,170,0,.4);}
+#adminBanner.type-danger{background:linear-gradient(90deg,rgba(200,0,60,.97),rgba(160,0,40,.95));color:#fff;border-bottom:1px solid rgba(255,0,80,.4);}
+#adminBanner.type-success{background:linear-gradient(90deg,rgba(0,160,80,.97),rgba(0,130,60,.95));color:#fff;border-bottom:1px solid rgba(0,212,100,.4);}
+@keyframes bannerSlide{from{transform:translateY(-100%);opacity:0}to{transform:translateY(0);opacity:1}}
+
+/* MOBILE */
+.menu-toggle{display:none;position:fixed;top:1rem;left:1rem;z-index:200;background:var(--surface);border:1px solid var(--border);width:40px;height:40px;border-radius:11px;align-items:center;justify-content:center;cursor:pointer;}
+@media(max-width:768px){
+  .sidebar{transform:translateX(-100%);}
+  .sidebar.open{transform:translateX(0);}
+  .main{margin-left:0;padding:1rem;padding-top:4rem;}
+  .menu-toggle{display:flex;}
+  .daily-cards{gap:.6rem;}
+  .form-row{grid-template-columns:1fr;}
+  .ref-stats{grid-template-columns:1fr 1fr;}
+  .rarity-legend{grid-template-columns:repeat(2,1fr);}
+  .stats-row{grid-template-columns:repeat(2,1fr);}
+}
+</style>
+</head>
+<body>
+
+<!-- LOADING -->
+<div id="loadingScreen">
+  <div class="loading-illustration">
+    <svg width="120" height="120" viewBox="0 0 120 120" fill="none">
+      <circle cx="60" cy="60" r="55" stroke="rgba(124,92,252,.1)" stroke-width="2"/>
+      <circle cx="60" cy="60" r="40" stroke="rgba(124,92,252,.15)" stroke-width="1" stroke-dasharray="4 4"/>
+      <circle cx="60" cy="60" r="25" fill="rgba(124,92,252,.08)" stroke="rgba(124,92,252,.2)" stroke-width="1"/>
+      <path d="M45 55 L60 40 L75 55 L75 75 L45 75 Z" fill="rgba(124,92,252,.15)" stroke="rgba(167,139,250,.4)" stroke-width="1.5" stroke-linejoin="round"/>
+      <rect x="53" y="62" width="14" height="13" rx="3" fill="rgba(167,139,250,.3)" stroke="rgba(167,139,250,.5)" stroke-width="1"/>
+      <circle cx="60" cy="60" r="4" fill="#7c5cfc"/>
+      <circle cx="60" cy="20" r="4" fill="rgba(124,92,252,.6)"/>
+      <circle cx="92" cy="38" r="3" fill="rgba(252,92,125,.5)"/>
+      <circle cx="92" cy="82" r="3" fill="rgba(0,229,255,.5)"/>
+      <circle cx="28" cy="38" r="3" fill="rgba(245,197,24,.5)"/>
+      <line x1="60" y1="60" x2="60" y2="20" stroke="rgba(124,92,252,.3)" stroke-width="1"/>
+      <line x1="60" y1="60" x2="92" y2="38" stroke="rgba(252,92,125,.3)" stroke-width="1"/>
+      <line x1="60" y1="60" x2="28" y2="38" stroke="rgba(245,197,24,.3)" stroke-width="1"/>
+    </svg>
+  </div>
+  <div class="logo">TTFHUB</div>
+  <div class="load-sub">Клановая система · Season 1</div>
+  <div class="loader-dots"><span></span><span></span><span></span></div>
+</div>
+
+<!-- AUTH -->
+<div class="auth-overlay" id="authOverlay">
+  <div class="auth-box">
+    <div class="auth-illustration">
+      <svg width="80" height="80" viewBox="0 0 80 80" fill="none">
+        <circle cx="40" cy="40" r="38" stroke="rgba(124,92,252,.2)" stroke-width="1" stroke-dasharray="3 3"/>
+        <circle cx="40" cy="40" r="28" fill="rgba(124,92,252,.07)" stroke="rgba(124,92,252,.15)" stroke-width="1"/>
+        <path d="M25 37 L40 22 L55 37 L55 56 L25 56 Z" fill="rgba(124,92,252,.12)" stroke="rgba(167,139,250,.35)" stroke-width="1.5" stroke-linejoin="round"/>
+        <rect x="33" y="43" width="14" height="13" rx="3" fill="rgba(167,139,250,.2)" stroke="rgba(167,139,250,.4)" stroke-width="1.2"/>
+        <circle cx="40" cy="30" r="3" fill="rgba(167,139,250,.5)"/>
+        <circle cx="63" cy="25" r="5" fill="rgba(0,230,118,.15)" stroke="rgba(0,230,118,.3)" stroke-width="1"/>
+        <path d="M61 25 L62.5 26.5 L66 23" stroke="#00e676" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <div class="auth-logo">TTFHUB</div>
+    <div class="auth-sub">Клановая система · Season 1</div>
+    <div class="auth-tabs">
+      <button class="auth-tab active" onclick="switchTab('login',event)">Вход</button>
+      <button class="auth-tab" onclick="switchTab('register',event)">Регистрация</button>
+    </div>
+    <div id="authMsg" class="auth-msg"></div>
+    <div class="auth-form active" id="loginForm">
+      <input class="inp" type="email" placeholder="Email" id="loginEmail">
+      <input class="inp" type="password" placeholder="Пароль" id="loginPass">
+      <button class="auth-btn-main" id="loginBtn" onclick="handleLogin()">ВОЙТИ</button>
+    </div>
+    <div class="auth-form" id="registerForm">
+      <input class="inp" type="text" placeholder="Ник" id="regUser">
+      <input class="inp" type="email" placeholder="Email" id="regEmail">
+      <input class="inp" type="password" placeholder="Пароль (мин. 6 симв.)" id="regPass">
+      <input class="inp" type="password" placeholder="Подтвердить пароль" id="regPass2">
+      <input class="inp" type="text" placeholder="Реферальный код (необязательно)" id="regRef">
+      <button class="auth-btn-main" id="regBtn" onclick="handleRegister()">СОЗДАТЬ АККАУНТ</button>
+    </div>
+  </div>
+</div>
+
+<button class="menu-toggle" id="menuToggle" onclick="toggleSidebar()">
+  <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="2" y="4" width="14" height="1.5" rx=".75" fill="rgba(255,255,255,.7)"/><rect x="2" y="8.25" width="14" height="1.5" rx=".75" fill="rgba(255,255,255,.7)"/><rect x="2" y="12.5" width="14" height="1.5" rx=".75" fill="rgba(255,255,255,.7)"/></svg>
+</button>
+
+<div id="adminBanner" style="animation:bannerSlide .4s cubic-bezier(.4,0,.2,1);">
+  <div style="display:flex;align-items:center;gap:.6rem;flex:1;">
+    <span id="bannerIcon"></span>
+    <span id="bannerText"></span>
+  </div>
+  <button onclick="document.getElementById('adminBanner').style.display='none'" style="background:none;border:none;color:inherit;cursor:pointer;opacity:.7;flex-shrink:0;">
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+  </button>
+</div>
+
+<div class="app" id="app">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <svg class="sidebar-logo-icon" viewBox="0 0 36 36" fill="none">
+        <rect width="36" height="36" rx="10" fill="rgba(124,92,252,.12)" stroke="rgba(124,92,252,.2)" stroke-width="1"/>
+        <path d="M10 20 L18 10 L26 20 L26 28 L10 28 Z" fill="rgba(124,92,252,.2)" stroke="rgba(167,139,250,.5)" stroke-width="1.3" stroke-linejoin="round"/>
+        <rect x="14" y="21" width="8" height="7" rx="2" fill="rgba(167,139,250,.3)" stroke="rgba(167,139,250,.5)" stroke-width="1"/>
+        <circle cx="18" cy="17" r="2" fill="#a78bfa"/>
+      </svg>
+      <div>
+        <div class="logo-text">TTFHUB</div>
+        <div class="logo-sub">Клановая система</div>
+      </div>
+    </div>
+    <div class="user-panel">
+      <div class="user-avatar" id="sideAvatar">T</div>
+      <div class="user-name-side" id="sideName">Player</div>
+      <div class="user-ttfka">
+        <svg class="ttfka-icon" viewBox="0 0 14 14" fill="none"><polygon points="7,1 9,5 13,5.5 10,8.5 10.8,13 7,10.8 3.2,13 4,8.5 1,5.5 5,5" fill="rgba(245,197,24,.3)" stroke="#f5c518" stroke-width="1" stroke-linejoin="round"/></svg>
+        <span id="sideTTFKA">0</span> TTFKA
+      </div>
+    </div>
+    <nav class="nav">
+      <div class="nav-section-label">Профиль</div>
+      <div class="nav-item active" onclick="goTo('account')">
+        <svg class="nav-icon" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="6" r="3.5" stroke="currentColor" stroke-width="1.4"/><path d="M2 16c0-3.866 3.134-7 7-7s7 3.134 7 7" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+        Аккаунт
+      </div>
+      <div class="nav-item" onclick="goTo('balance')">
+        <svg class="nav-icon" viewBox="0 0 18 18" fill="none"><polygon points="9,1.5 11,6.5 16.5,7 12.5,10.5 13.5,16 9,13.5 4.5,16 5.5,10.5 1.5,7 7,6.5" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" fill="none"/></svg>
+        Баланс
+      </div>
+      <div class="nav-section-label">Активности</div>
+      <div class="nav-item" onclick="goTo('tasks')">
+        <svg class="nav-icon" viewBox="0 0 18 18" fill="none"><rect x="2" y="2" width="14" height="14" rx="3" stroke="currentColor" stroke-width="1.4"/><path d="M5 9l3 3 5-5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Задания<span class="nav-badge" id="pendingBadge" style="display:none">!</span>
+      </div>
+      <div class="nav-item" onclick="goTo('daily')">
+        <svg class="nav-icon" viewBox="0 0 18 18" fill="none"><rect x="2" y="5" width="14" height="11" rx="3" stroke="currentColor" stroke-width="1.4"/><path d="M5 5V3M13 5V3M2 9h14" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+        Ежедневный бонус
+      </div>
+      <div class="nav-item" onclick="goTo('content')">
+        <svg class="nav-icon" viewBox="0 0 18 18" fill="none"><rect x="1" y="3" width="16" height="12" rx="3" stroke="currentColor" stroke-width="1.4"/><path d="M7 7l4 2-4 2V7z" fill="currentColor"/></svg>
+        Создание контента
+      </div>
+      <div class="nav-section-label">Магазин</div>
+      <div class="nav-item" onclick="goTo('shop')">
+        <svg class="nav-icon" viewBox="0 0 18 18" fill="none"><path d="M2 2h2l2 8h8l2-6H5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><circle cx="8" cy="15" r="1.2" fill="currentColor"/><circle cx="13" cy="15" r="1.2" fill="currentColor"/></svg>
+        Магазин
+      </div>
+      <div class="nav-item" onclick="goTo('referral')">
+        <svg class="nav-icon" viewBox="0 0 18 18" fill="none"><circle cx="4" cy="9" r="2.5" stroke="currentColor" stroke-width="1.4"/><circle cx="14" cy="4" r="2.5" stroke="currentColor" stroke-width="1.4"/><circle cx="14" cy="14" r="2.5" stroke="currentColor" stroke-width="1.4"/><path d="M6.5 9h1.5M9 4.8l3.5 1.5M9 13.2l3.5-1.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+        Рефералы
+      </div>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="logout-btn-side" onclick="logout()">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M5 2H2v10h3M9 4l4 3-4 3M13 7H6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Выйти из аккаунта
+      </button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <!-- ACCOUNT -->
+    <div class="page active" id="page-account">
+      <div class="page-header">
+        <div class="page-header-left">
+          <div class="page-title">Аккаунт</div>
+          <div class="page-sub">Твой профиль в клановой системе TTFHub</div>
+        </div>
+        <svg class="page-header-art" viewBox="0 0 60 60" fill="none">
+          <circle cx="30" cy="30" r="28" stroke="rgba(124,92,252,.15)" stroke-width="1" stroke-dasharray="3 3"/>
+          <circle cx="30" cy="22" r="9" stroke="rgba(167,139,250,.3)" stroke-width="1.5"/>
+          <path d="M12 50c0-9.94 8.06-18 18-18s18 8.06 18 18" stroke="rgba(167,139,250,.3)" stroke-width="1.5" stroke-linecap="round"/>
+          <circle cx="30" cy="22" r="5" fill="rgba(124,92,252,.2)"/>
+        </svg>
+      </div>
+      <div class="profile-card">
+        <div class="profile-avatar-big" id="profileAvatar">T</div>
+        <div class="profile-info">
+          <h2 id="profileName">Player</h2>
+          <div class="profile-email" id="profileEmail">—</div>
+          <div class="profile-badges">
+            <span class="badge badge-level">УР. <span id="profileLevel">1</span></span>
+            <span class="badge badge-ttfka">★ <span id="profileTTFKA">0</span> TTFKA</span>
+          </div>
+        </div>
+      </div>
+      <div class="stats-row">
+        <div class="stat-card">
+          <svg class="stat-card-art" viewBox="0 0 60 60" fill="none"><path d="M10 55 L30 10 L50 55 Z" stroke="rgba(167,139,250,.3)" stroke-width="1.5" fill="rgba(124,92,252,.06)"/></svg>
+          <div class="stat-label">Уровень</div><div class="stat-val" id="statLevel">1</div>
+        </div>
+        <div class="stat-card">
+          <svg class="stat-card-art" viewBox="0 0 60 60" fill="none"><polygon points="30,5 36,22 55,22 40,34 46,52 30,41 14,52 20,34 5,22 24,22" stroke="rgba(245,197,24,.3)" stroke-width="1.5" fill="rgba(245,197,24,.06)"/></svg>
+          <div class="stat-label">TTFKA</div><div class="stat-val gold" id="statTTFKA">0</div>
+        </div>
+        <div class="stat-card">
+          <svg class="stat-card-art" viewBox="0 0 60 60" fill="none"><circle cx="30" cy="30" r="22" stroke="rgba(0,230,118,.2)" stroke-width="1.5" fill="rgba(0,230,118,.04)"/><path d="M20 30l7 7 13-13" stroke="rgba(0,230,118,.3)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <div class="stat-label">Всего XP</div><div class="stat-val green" id="statXP">0</div>
+        </div>
+        <div class="stat-card">
+          <svg class="stat-card-art" viewBox="0 0 60 60" fill="none"><rect x="8" y="10" width="44" height="40" rx="6" stroke="rgba(167,139,250,.2)" stroke-width="1.5" fill="rgba(124,92,252,.04)"/><path d="M18 30l8 8 16-16" stroke="rgba(167,139,250,.3)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <div class="stat-label">Выполнено заданий</div><div class="stat-val" id="statTasks">0</div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-glow"></div>
+        <div class="level-bar-header">
+          <span class="level-label">Прогресс до следующего уровня</span>
+          <span class="level-num" id="xpProgress">0 / 500 XP</span>
+        </div>
+        <div class="level-bar"><div class="level-fill" id="levelFill" style="width:0%"></div></div>
+        <div class="rewards-grid-pass" id="rewardsGrid"></div>
+      </div>
+    </div>
+
+    <!-- BALANCE -->
+    <div class="page" id="page-balance">
+      <div class="page-header">
+        <div class="page-header-left">
+          <div class="page-title">Баланс</div>
+          <div class="page-sub">Твои TTFKA — клановая валюта TTFHub</div>
+        </div>
+        <svg class="page-header-art" viewBox="0 0 60 60" fill="none">
+          <polygon points="30,5 36,22 55,22 40,34 46,52 30,41 14,52 20,34 5,22 24,22" stroke="rgba(245,197,24,.25)" stroke-width="1.5" fill="rgba(245,197,24,.05)"/>
+          <polygon points="30,14 33,24 43,24 35,30 38,40 30,34 22,40 25,30 17,24 27,24" fill="rgba(245,197,24,.08)"/>
+        </svg>
+      </div>
+      <div class="stats-row">
+        <div class="stat-card"><div class="stat-label">TTFKA на балансе</div><div class="stat-val gold" id="balTTFKA">0</div></div>
+        <div class="stat-card"><div class="stat-label">Потрачено</div><div class="stat-val" id="balSpent">0</div></div>
+        <div class="stat-card"><div class="stat-label">Заработано</div><div class="stat-val green" id="balEarned">0</div></div>
+      </div>
+      <div class="card">
+        <div class="card-glow"></div>
+        <div style="display:flex;align-items:flex-start;gap:1rem;">
+          <svg width="48" height="48" viewBox="0 0 48 48" fill="none" style="flex-shrink:0;margin-top:.1rem">
+            <rect width="48" height="48" rx="14" fill="rgba(124,92,252,.08)" stroke="rgba(124,92,252,.15)" stroke-width="1"/>
+            <polygon points="24,8 28,18 40,19 31,27 34,39 24,33 14,39 17,27 8,19 20,18" fill="rgba(245,197,24,.12)" stroke="rgba(245,197,24,.4)" stroke-width="1.2" stroke-linejoin="round"/>
+            <polygon points="24,14 26.5,21 34,21.5 28,26.5 30,34 24,30.5 18,34 20,26.5 14,21.5 21.5,21" fill="rgba(245,197,24,.2)"/>
+          </svg>
+          <div>
+            <div style="font-weight:700;margin-bottom:.5rem;font-size:.95rem;">Что такое TTFKA?</div>
+            <div style="font-size:.82rem;color:var(--sub);line-height:1.75;"><span style="color:var(--gold);font-weight:700">TTFKA</span> — официальная валюта клана TTF. Зарабатывай выполняя задания, снимая контент с кланом и открывая ежедневные карточки. Трать в магазине на роли, доступы и бусты.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TASKS -->
+    <div class="page" id="page-tasks">
+      <div class="page-header">
+        <div class="page-header-left">
+          <div class="page-title">Задания</div>
+          <div class="page-sub">Выполняй задания — отправляй на проверку — получай TTFKA</div>
+        </div>
+        <svg class="page-header-art" viewBox="0 0 60 60" fill="none">
+          <rect x="8" y="8" width="44" height="44" rx="10" stroke="rgba(124,92,252,.2)" stroke-width="1.5" fill="rgba(124,92,252,.04)"/>
+          <path d="M18 30l8 8 16-16" stroke="rgba(167,139,250,.4)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <div class="tasks-grid" id="tasksGrid"></div>
+    </div>
+
+    <!-- DAILY -->
+    <div class="page" id="page-daily">
+      <div class="page-header">
+        <div class="page-header-left">
+          <div class="page-title">Ежедневный бонус</div>
+          <div class="page-sub">Выбери одну из трёх карточек. Доступно раз в день.</div>
+        </div>
+        <svg class="page-header-art" viewBox="0 0 60 60" fill="none">
+          <rect x="6" y="14" width="48" height="38" rx="8" stroke="rgba(124,92,252,.2)" stroke-width="1.5" fill="rgba(124,92,252,.04)"/>
+          <rect x="6" y="14" width="48" height="12" rx="8" fill="rgba(124,92,252,.08)" stroke="rgba(124,92,252,.15)" stroke-width="1"/>
+          <path d="M20 14V8M40 14V8" stroke="rgba(167,139,250,.35)" stroke-width="1.8" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div id="dailyStatus" style="display:none;background:rgba(0,230,118,.06);border:1px solid rgba(0,230,118,.18);border-radius:14px;padding:1rem 1.3rem;margin-bottom:1.5rem;font-size:.84rem;color:var(--green);display:flex;align-items:center;gap:.6rem;">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="8" stroke="currentColor" stroke-width="1.3"/><path d="M5.5 9l2.5 2.5 4.5-4.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Ты уже открыл карточку сегодня. Возвращайся завтра!
+      </div>
+      <div class="daily-cards">
+        <div class="daily-card" id="dc0" onclick="openDailyCard(0)">
+          <div class="card-back">
+            <svg class="card-back-art" viewBox="0 0 70 70" fill="none">
+              <circle cx="35" cy="35" r="32" stroke="rgba(124,92,252,.2)" stroke-width="1" stroke-dasharray="4 4"/>
+              <circle cx="35" cy="35" r="22" fill="rgba(124,92,252,.07)" stroke="rgba(124,92,252,.15)" stroke-width="1"/>
+              <path d="M20 35 L35 18 L50 35 L50 52 L20 52 Z" fill="rgba(124,92,252,.12)" stroke="rgba(167,139,250,.3)" stroke-width="1.3" stroke-linejoin="round"/>
+              <rect x="28" y="41" width="14" height="11" rx="3" fill="rgba(167,139,250,.15)" stroke="rgba(167,139,250,.3)" stroke-width="1"/>
+              <text x="35" y="32" font-family="Orbitron,sans-serif" font-size="7" fill="rgba(167,139,250,.5)" text-anchor="middle" font-weight="700">TTF</text>
+            </svg>
+            <div class="tap-hint">Нажми</div>
+          </div>
+          <div class="card-front"></div>
+        </div>
+        <div class="daily-card" id="dc1" onclick="openDailyCard(1)">
+          <div class="card-back">
+            <svg class="card-back-art" viewBox="0 0 70 70" fill="none">
+              <circle cx="35" cy="35" r="32" stroke="rgba(124,92,252,.2)" stroke-width="1" stroke-dasharray="4 4"/>
+              <circle cx="35" cy="35" r="22" fill="rgba(124,92,252,.07)" stroke="rgba(124,92,252,.15)" stroke-width="1"/>
+              <path d="M20 35 L35 18 L50 35 L50 52 L20 52 Z" fill="rgba(124,92,252,.12)" stroke="rgba(167,139,250,.3)" stroke-width="1.3" stroke-linejoin="round"/>
+              <rect x="28" y="41" width="14" height="11" rx="3" fill="rgba(167,139,250,.15)" stroke="rgba(167,139,250,.3)" stroke-width="1"/>
+              <text x="35" y="32" font-family="Orbitron,sans-serif" font-size="7" fill="rgba(167,139,250,.5)" text-anchor="middle" font-weight="700">TTF</text>
+            </svg>
+            <div class="tap-hint">Нажми</div>
+          </div>
+          <div class="card-front"></div>
+        </div>
+        <div class="daily-card" id="dc2" onclick="openDailyCard(2)">
+          <div class="card-back">
+            <svg class="card-back-art" viewBox="0 0 70 70" fill="none">
+              <circle cx="35" cy="35" r="32" stroke="rgba(124,92,252,.2)" stroke-width="1" stroke-dasharray="4 4"/>
+              <circle cx="35" cy="35" r="22" fill="rgba(124,92,252,.07)" stroke="rgba(124,92,252,.15)" stroke-width="1"/>
+              <path d="M20 35 L35 18 L50 35 L50 52 L20 52 Z" fill="rgba(124,92,252,.12)" stroke="rgba(167,139,250,.3)" stroke-width="1.3" stroke-linejoin="round"/>
+              <rect x="28" y="41" width="14" height="11" rx="3" fill="rgba(167,139,250,.15)" stroke="rgba(167,139,250,.3)" stroke-width="1"/>
+              <text x="35" y="32" font-family="Orbitron,sans-serif" font-size="7" fill="rgba(167,139,250,.5)" text-anchor="middle" font-weight="700">TTF</text>
+            </svg>
+            <div class="tap-hint">Нажми</div>
+          </div>
+          <div class="card-front"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-glow"></div>
+        <div style="font-weight:700;margin-bottom:1rem;font-size:.95rem;">Редкость наград</div>
+        <div class="rarity-legend">
+          <div class="rarity-item"><div class="rarity-tag rt-common" style="display:inline-block;margin-bottom:.5rem;">Обычный</div><div class="rarity-item-name">5–20 TTFKA</div><div class="rarity-item-desc">Небольшой бонус каждый день</div></div>
+          <div class="rarity-item"><div class="rarity-tag rt-rare" style="display:inline-block;margin-bottom:.5rem;">Редкий</div><div class="rarity-item-name">25–75 TTFKA</div><div class="rarity-item-desc">Приятная прибавка</div></div>
+          <div class="rarity-item"><div class="rarity-tag rt-epic" style="display:inline-block;margin-bottom:.5rem;">Эпический</div><div class="rarity-item-name">100–200 TTFKA</div><div class="rarity-item-desc">Крупная награда</div></div>
+          <div class="rarity-item"><div class="rarity-tag rt-mythic" style="display:inline-block;margin-bottom:.5rem;">Мифический</div><div class="rarity-item-name">250–500 TTFKA</div><div class="rarity-item-desc">Джекпот! Очень редко</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SHOP -->
+    <div class="page" id="page-shop">
+      <div class="page-header">
+        <div class="page-header-left">
+          <div class="page-title">Магазин</div>
+          <div class="page-sub">Трать TTFKA на роли, доступы и бусты</div>
+        </div>
+        <svg class="page-header-art" viewBox="0 0 60 60" fill="none">
+          <path d="M8 8h8l10 28h24l8-20H18" stroke="rgba(252,92,125,.25)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="28" cy="50" r="4" stroke="rgba(252,92,125,.25)" stroke-width="1.5"/>
+          <circle cx="46" cy="50" r="4" stroke="rgba(252,92,125,.25)" stroke-width="1.5"/>
+        </svg>
+      </div>
+      <div class="shop-filters" id="shopFilters"></div>
+      <div class="shop-grid" id="shopGrid"></div>
+    </div>
+
+    <!-- REFERRAL -->
+    <div class="page" id="page-referral">
+      <div class="page-header">
+        <div class="page-header-left">
+          <div class="page-title">Реферальная система</div>
+          <div class="page-sub">Приглашай друзей — получай TTFKA за каждого</div>
+        </div>
+        <svg class="page-header-art" viewBox="0 0 60 60" fill="none">
+          <circle cx="14" cy="30" r="8" stroke="rgba(124,92,252,.25)" stroke-width="1.5"/>
+          <circle cx="46" cy="14" r="8" stroke="rgba(0,229,255,.2)" stroke-width="1.5"/>
+          <circle cx="46" cy="46" r="8" stroke="rgba(0,230,118,.2)" stroke-width="1.5"/>
+          <path d="M22 30l8 0M30 16l8 4M30 44l8-4" stroke="rgba(255,255,255,.15)" stroke-width="1.3" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div class="card" style="margin-bottom:1.5rem;">
+        <div class="card-glow"></div>
+        <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:1rem;">
+          <svg width="32" height="32" viewBox="0 0 32 32" fill="none" style="flex-shrink:0">
+            <rect width="32" height="32" rx="9" fill="rgba(124,92,252,.1)" stroke="rgba(124,92,252,.2)" stroke-width="1"/>
+            <path d="M8 16c0 0 3-3 8-3s8 3 8 3M16 9v3M12 10l1.5 2.5M20 10l-1.5 2.5" stroke="rgba(167,139,250,.5)" stroke-width="1.3" stroke-linecap="round"/>
+            <circle cx="16" cy="21" r="4" stroke="rgba(167,139,250,.5)" stroke-width="1.3"/>
+            <path d="M14 21l1.5 1.5 2.5-2.5" stroke="rgba(0,230,118,.6)" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <div style="font-weight:700;font-size:.95rem;">Твоя реферальная ссылка</div>
+        </div>
+        <div class="ref-link-box">
+          <svg class="ref-link-icon" viewBox="0 0 32 32" fill="none">
+            <circle cx="16" cy="16" r="14" stroke="rgba(124,92,252,.2)" stroke-width="1" stroke-dasharray="3 3"/>
+            <path d="M10 16a6 6 0 0112 0M10 16a6 6 0 0012 0M16 10v12" stroke="rgba(124,92,252,.4)" stroke-width="1.3" stroke-linecap="round"/>
+          </svg>
+          <div class="ref-link" id="refLink">Загрузка...</div>
+          <button class="copy-btn" onclick="copyRef()">
+            <svg viewBox="0 0 14 14" fill="none"><rect x="4" y="4" width="9" height="9" rx="2" stroke="currentColor" stroke-width="1.2"/><path d="M4 4V2a1 1 0 011-1h7a1 1 0 011 1v7a1 1 0 01-1 1H10" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+            Копировать
+          </button>
+        </div>
+        <div style="font-size:.79rem;color:var(--sub);padding:.75rem;background:rgba(255,255,255,.025);border-radius:10px;line-height:1.6;">За каждого приглашённого — <span style="color:var(--gold);font-weight:700">50 TTFKA</span> тебе и <span style="color:var(--primary2);font-weight:700">25 TTFKA</span> другу при регистрации.</div>
+      </div>
+      <div class="ref-stats">
+        <div class="ref-stat">
+          <svg class="ref-stat-art" viewBox="0 0 50 50" fill="none"><circle cx="25" cy="18" r="10" stroke="rgba(124,92,252,.4)" stroke-width="1.5"/><path d="M5 44c0-11 8.95-20 20-20s20 8.95 20 20" stroke="rgba(124,92,252,.4)" stroke-width="1.5" stroke-linecap="round"/></svg>
+          <div class="ref-stat-val" id="refCount">0</div><div class="ref-stat-label">Приглашено</div>
+        </div>
+        <div class="ref-stat">
+          <svg class="ref-stat-art" viewBox="0 0 50 50" fill="none"><polygon points="25,4 30,18 45,19 33,29 37,43 25,35 13,43 17,29 5,19 20,18" stroke="rgba(245,197,24,.4)" stroke-width="1.5" fill="none"/></svg>
+          <div class="ref-stat-val" id="refEarned">0</div><div class="ref-stat-label">TTFKA заработано</div>
+        </div>
+        <div class="ref-stat">
+          <svg class="ref-stat-art" viewBox="0 0 50 50" fill="none"><path d="M10 42 L25 8 L40 42 L10 42 Z" stroke="rgba(0,229,255,.3)" stroke-width="1.5" fill="rgba(0,229,255,.05)"/></svg>
+          <div class="ref-stat-val" id="refRank">—</div><div class="ref-stat-label">Ранг рефера</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CONTENT -->
+    <div class="page" id="page-content">
+      <div class="page-header">
+        <div class="page-header-left">
+          <div class="page-title">Создание контента</div>
+          <div class="page-sub">Снимай ролики с TTF — получай TTFKA</div>
+        </div>
+        <svg class="page-header-art" viewBox="0 0 60 60" fill="none">
+          <rect x="4" y="10" width="52" height="36" rx="8" stroke="rgba(124,92,252,.2)" stroke-width="1.5" fill="rgba(124,92,252,.04)"/>
+          <path d="M22 22l16 8-16 8V22z" fill="rgba(167,139,250,.2)" stroke="rgba(167,139,250,.35)" stroke-width="1.2" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <div class="content-form">
+        <div class="content-form-header">
+          <svg viewBox="0 0 28 28" fill="none">
+            <rect width="28" height="28" rx="8" fill="rgba(124,92,252,.1)" stroke="rgba(124,92,252,.2)" stroke-width="1"/>
+            <path d="M6 20l4-4 4 4 8-10" stroke="rgba(167,139,250,.6)" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M18 10h4v4" stroke="rgba(167,139,250,.5)" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <h3>Отправить ролик на проверку</h3>
+        </div>
+        <p>Залей ролик с кланом TTF или с моими видео на YouTube / TikTok и отправь ссылку. После проверки получишь TTFKA на баланс.</p>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Тип ролика</label>
+            <select class="form-inp" id="contentType">
+              <option value="youtube">YouTube (полный)</option>
+              <option value="shorts">YouTube Shorts</option>
+              <option value="tiktok">TikTok</option>
+              <option value="collab">Совместный с TTF</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Ссылка на ролик</label>
+            <input class="form-inp" type="url" id="contentUrl" placeholder="https://youtube.com/...">
+          </div>
+        </div>
+        <div class="form-group" style="margin-bottom:1.1rem;">
+          <label class="form-label">Описание (необязательно)</label>
+          <input class="form-inp" type="text" id="contentDesc" placeholder="Кратко о ролике...">
+        </div>
+        <button class="submit-content-btn" onclick="submitContent()">
+          <svg viewBox="0 0 18 18" fill="none"><path d="M3 9l6-6 6 6M9 3v12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Отправить на проверку
+        </button>
+      </div>
+      <div class="content-rules">
+        <div class="content-rules-header">
+          <svg viewBox="0 0 20 20" fill="none"><rect x="3" y="3" width="14" height="14" rx="3" stroke="rgba(245,197,24,.5)" stroke-width="1.3"/><path d="M7 10h6M7 7h6M7 13h4" stroke="rgba(245,197,24,.5)" stroke-width="1.3" stroke-linecap="round"/></svg>
+          <h4>Правила и награды</h4>
+        </div>
+        <ul>
+          <li>YouTube ролик (от 3 мин): <span style="color:var(--gold);font-weight:700">100–300 TTFKA</span> в зависимости от просмотров</li>
+          <li>YouTube Shorts / TikTok: <span style="color:var(--gold);font-weight:700">30–100 TTFKA</span></li>
+          <li>Совместный ролик с TTF: <span style="color:var(--gold);font-weight:700">+50% бонус</span></li>
+          <li>Ролик должен содержать #TTFHub или упоминание клана</li>
+          <li>Один ролик — одна заявка. Накрутка запрещена.</li>
+        </ul>
+      </div>
+      <div class="my-submissions">
+        <div class="submissions-header">Мои заявки</div>
+        <div id="myContentSubmissions" style="color:var(--sub);font-size:.83rem;">Заявок пока нет.</div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- MODAL -->
+<div class="modal" id="purchaseModal">
+  <div class="modal-box">
+    <div class="modal-title">Подтверждение покупки</div>
+    <div id="purchaseDetails"></div>
+    <div class="modal-actions">
+      <button class="modal-btn modal-btn-confirm" id="confirmPurchaseBtn">КУПИТЬ</button>
+      <button class="modal-btn modal-btn-cancel" onclick="closeModal('purchaseModal')">ОТМЕНА</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL='https://ozgrmhowxhojxtqbhbtz.supabase.co';
+const SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im96Z3JtaG93eGhvanh0cWJoYnR6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ1NDYwNjMsImV4cCI6MjA5MDEyMjA2M30.Cf8OMf6bJ8u0OhBw-4NOj5jr7dfHBkjjX9WtM4fBrGQ';
+const RESEND_KEY='re_8gsEf9Yr_3yMzi3pCZHTDJUaUurv7KYV1';
+const ADMIN_EMAIL='niksowhat1@gmail.com';
+const SITE_URL='https://fleybi.space/ttfhub';
+
+const {createClient}=supabase;
+const sb=createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
+let user=null,profile=null,taskSubs={},contentSubs=[];
+
+const defaultTasks=[
+  {id:'t1',icon:'target',name:'Приветствие',desc:'Зайди в систему и представься клану',xp:50,coins:20},
+  {id:'t2',icon:'game',name:'Игровой день',desc:'Сыграй 3 матча в течение дня',xp:100,coins:50},
+  {id:'t3',icon:'trophy',name:'Победитель',desc:'Одержи 5 побед за неделю',xp:150,coins:80},
+  {id:'t4',icon:'people',name:'Рекрут',desc:'Пригласи нового участника в клан',xp:200,coins:100},
+  {id:'t5',icon:'mic',name:'Стример',desc:'Выйди в стрим с кланом',xp:250,coins:120},
+  {id:'t6',icon:'crown',name:'Легенда',desc:'Достигни топ-10 в рейтинге клана',xp:500,coins:200},
+];
+
+const taskIcons={
+  target:`<svg width="26" height="26" viewBox="0 0 26 26" fill="none"><circle cx="13" cy="13" r="11" stroke="rgba(167,139,250,.5)" stroke-width="1.5"/><circle cx="13" cy="13" r="7" stroke="rgba(167,139,250,.4)" stroke-width="1.2"/><circle cx="13" cy="13" r="3" fill="rgba(167,139,250,.4)" stroke="rgba(167,139,250,.6)" stroke-width="1"/></svg>`,
+  game:`<svg width="26" height="26" viewBox="0 0 26 26" fill="none"><rect x="3" y="7" width="20" height="13" rx="4" stroke="rgba(167,139,250,.5)" stroke-width="1.5"/><path d="M9 13h4M11 11v4" stroke="rgba(167,139,250,.5)" stroke-width="1.4" stroke-linecap="round"/><circle cx="17" cy="12" r="1.2" fill="rgba(167,139,250,.5)"/><circle cx="19.5" cy="14.5" r="1.2" fill="rgba(167,139,250,.5)"/></svg>`,
+  trophy:`<svg width="26" height="26" viewBox="0 0 26 26" fill="none"><path d="M8 4h10l-2 9a5 5 0 01-6 0L8 4z" stroke="rgba(245,197,24,.5)" stroke-width="1.5" stroke-linejoin="round"/><path d="M5 4h3M18 4h3" stroke="rgba(245,197,24,.4)" stroke-width="1.4" stroke-linecap="round"/><path d="M13 17v4M9 21h8" stroke="rgba(245,197,24,.4)" stroke-width="1.4" stroke-linecap="round"/></svg>`,
+  people:`<svg width="26" height="26" viewBox="0 0 26 26" fill="none"><circle cx="10" cy="9" r="4" stroke="rgba(167,139,250,.5)" stroke-width="1.4"/><path d="M2 22c0-4.4 3.6-8 8-8" stroke="rgba(167,139,250,.4)" stroke-width="1.4" stroke-linecap="round"/><circle cx="18" cy="11" r="3" stroke="rgba(0,229,255,.4)" stroke-width="1.3"/><path d="M16 22c0-3 2-5 5-5" stroke="rgba(0,229,255,.3)" stroke-width="1.3" stroke-linecap="round"/><path d="M14 14l2-1" stroke="rgba(0,230,118,.4)" stroke-width="1.3" stroke-linecap="round"/></svg>`,
+  mic:`<svg width="26" height="26" viewBox="0 0 26 26" fill="none"><rect x="9" y="2" width="8" height="13" rx="4" stroke="rgba(167,139,250,.5)" stroke-width="1.4"/><path d="M5 13a8 8 0 0016 0" stroke="rgba(167,139,250,.4)" stroke-width="1.4" stroke-linecap="round"/><path d="M13 21v3M10 24h6" stroke="rgba(167,139,250,.4)" stroke-width="1.4" stroke-linecap="round"/></svg>`,
+  crown:`<svg width="26" height="26" viewBox="0 0 26 26" fill="none"><path d="M4 18 L7 8 L13 14 L19 5 L22 18 Z" fill="rgba(252,92,125,.1)" stroke="rgba(252,92,125,.45)" stroke-width="1.4" stroke-linejoin="round"/><path d="M4 18h18v3H4z" fill="rgba(252,92,125,.1)" stroke="rgba(252,92,125,.35)" stroke-width="1.2"/></svg>`,
+};
+
+const cfg={xpPerLevel:500,tasks:defaultTasks,shopItems:[
+  {id:1,name:'VIP Роль',icon:'role-vip',desc:'Эксклюзивная роль в Discord',price:500,category:'roles'},
+  {id:2,name:'Elite Роль',icon:'role-elite',desc:'Премиум статус в клане',price:1000,category:'roles'},
+  {id:3,name:'Закрытый Чат',icon:'access-chat',desc:'Приватный канал VIP',price:300,category:'access'},
+  {id:4,name:'Приватные Игры',icon:'access-game',desc:'Закрытые игровые сеансы',price:700,category:'access'},
+  {id:5,name:'Цвет Ника',icon:'cosm-color',desc:'Кастомизируй ник цветом',price:200,category:'cosmetics'},
+  {id:6,name:'Рамка Профиля',icon:'cosm-frame',desc:'Красивая рамка профиля',price:400,category:'cosmetics'},
+  {id:7,name:'x2 XP Буст',icon:'boost-xp',desc:'Двойной опыт на 24 часа',price:400,category:'boosters'},
+  {id:8,name:'Буст Батлпаса',icon:'boost-bp',desc:'Ускори прогресс батлпаса',price:800,category:'boosters'},
+]};
+
+const shopIcons={
+  'role-vip':`<svg width="54" height="54" viewBox="0 0 54 54" fill="none"><rect width="54" height="54" rx="14" fill="rgba(124,92,252,.08)" stroke="rgba(124,92,252,.15)" stroke-width="1"/><path d="M12 36 L18 16 L27 26 L36 10 L42 36 Z" fill="rgba(124,92,252,.1)" stroke="rgba(167,139,250,.4)" stroke-width="1.5" stroke-linejoin="round"/><rect x="12" y="36" width="30" height="5" rx="2" fill="rgba(124,92,252,.08)" stroke="rgba(167,139,250,.25)" stroke-width="1"/><circle cx="27" cy="16" r="3" fill="rgba(167,139,250,.3)"/></svg>`,
+  'role-elite':`<svg width="54" height="54" viewBox="0 0 54 54" fill="none"><rect width="54" height="54" rx="14" fill="rgba(0,229,255,.06)" stroke="rgba(0,229,255,.15)" stroke-width="1"/><polygon points="27,10 31,20 42,21 34,28 37,39 27,33 17,39 20,28 12,21 23,20" fill="rgba(0,229,255,.08)" stroke="rgba(0,229,255,.35)" stroke-width="1.3" stroke-linejoin="round"/><polygon points="27,16 29.5,23 37,23.5 31,28 33,35 27,31.5 21,35 23,28 17,23.5 24.5,23" fill="rgba(0,229,255,.12)"/></svg>`,
+  'access-chat':`<svg width="54" height="54" viewBox="0 0 54 54" fill="none"><rect width="54" height="54" rx="14" fill="rgba(252,92,125,.06)" stroke="rgba(252,92,125,.12)" stroke-width="1"/><rect x="10" y="14" width="34" height="22" rx="6" stroke="rgba(252,92,125,.4)" stroke-width="1.5" fill="rgba(252,92,125,.06)"/><circle cx="19" cy="25" r="2.5" fill="rgba(252,92,125,.4)"/><circle cx="27" cy="25" r="2.5" fill="rgba(252,92,125,.35)"/><circle cx="35" cy="25" r="2.5" fill="rgba(252,92,125,.3)"/><path d="M20 36l-6 6v-6" stroke="rgba(252,92,125,.3)" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  'access-game':`<svg width="54" height="54" viewBox="0 0 54 54" fill="none"><rect width="54" height="54" rx="14" fill="rgba(0,230,118,.05)" stroke="rgba(0,230,118,.12)" stroke-width="1"/><rect x="8" y="16" width="38" height="22" rx="7" stroke="rgba(0,230,118,.35)" stroke-width="1.5" fill="rgba(0,230,118,.05)"/><path d="M19 27h6M22 24v6" stroke="rgba(0,230,118,.5)" stroke-width="1.5" stroke-linecap="round"/><circle cx="34" cy="25" r="2" fill="rgba(0,230,118,.4)"/><circle cx="38" cy="29" r="2" fill="rgba(0,230,118,.35)"/></svg>`,
+  'cosm-color':`<svg width="54" height="54" viewBox="0 0 54 54" fill="none"><rect width="54" height="54" rx="14" fill="rgba(245,197,24,.05)" stroke="rgba(245,197,24,.12)" stroke-width="1"/><circle cx="27" cy="24" r="11" stroke="rgba(245,197,24,.3)" stroke-width="1.5" fill="rgba(245,197,24,.05)"/><path d="M20 24a7 7 0 017-7" stroke="rgba(245,197,24,.5)" stroke-width="2" stroke-linecap="round"/><circle cx="27" cy="24" r="4" fill="rgba(245,197,24,.15)" stroke="rgba(245,197,24,.35)" stroke-width="1"/><path d="M27 35v4M24 37h6" stroke="rgba(245,197,24,.3)" stroke-width="1.3" stroke-linecap="round"/></svg>`,
+  'cosm-frame':`<svg width="54" height="54" viewBox="0 0 54 54" fill="none"><rect width="54" height="54" rx="14" fill="rgba(124,92,252,.06)" stroke="rgba(124,92,252,.12)" stroke-width="1"/><rect x="10" y="10" width="34" height="34" rx="8" stroke="rgba(167,139,250,.4)" stroke-width="2" fill="none"/><rect x="16" y="16" width="22" height="22" rx="5" stroke="rgba(167,139,250,.2)" stroke-width="1" fill="rgba(124,92,252,.04)"/><path d="M10 10 L16 16M44 10 L38 16M10 44 L16 38M44 44 L38 38" stroke="rgba(167,139,250,.3)" stroke-width="1.2"/></svg>`,
+  'boost-xp':`<svg width="54" height="54" viewBox="0 0 54 54" fill="none"><rect width="54" height="54" rx="14" fill="rgba(252,92,125,.05)" stroke="rgba(252,92,125,.12)" stroke-width="1"/><path d="M27 40 L27 22 L20 30 L27 22 L34 30 L27 22" stroke="rgba(252,92,125,.4)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M22 38 L27 14 L32 38" fill="rgba(252,92,125,.08)" stroke="rgba(252,92,125,.35)" stroke-width="1.3" stroke-linejoin="round"/><text x="27" y="46" font-family="Orbitron,sans-serif" font-size="7" fill="rgba(252,92,125,.5)" text-anchor="middle" font-weight="700">x2</text></svg>`,
+  'boost-bp':`<svg width="54" height="54" viewBox="0 0 54 54" fill="none"><rect width="54" height="54" rx="14" fill="rgba(0,229,255,.05)" stroke="rgba(0,229,255,.12)" stroke-width="1"/><path d="M27 42 C27 42 14 34 14 22 C14 15.37 20 10 27 10 C34 10 40 15.37 40 22 C40 34 27 42 27 42Z" fill="rgba(0,229,255,.07)" stroke="rgba(0,229,255,.3)" stroke-width="1.5"/><path d="M22 22l3 3 6-7" stroke="rgba(0,229,255,.5)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+};
+
+const rewardIcons={
+  common:`<svg class="card-reward-icon" viewBox="0 0 56 56" fill="none"><circle cx="28" cy="28" r="24" stroke="rgba(167,139,250,.3)" stroke-width="1.5"/><polygon points="28,10 32,21 44,22 35,30 38,42 28,36 18,42 21,30 12,22 24,21" fill="rgba(167,139,250,.15)" stroke="rgba(167,139,250,.4)" stroke-width="1.2" stroke-linejoin="round"/></svg>`,
+  rare:`<svg class="card-reward-icon" viewBox="0 0 56 56" fill="none"><circle cx="28" cy="28" r="24" stroke="rgba(0,229,255,.25)" stroke-width="1.5"/><polygon points="28,8 33,22 48,23 37,32 41,46 28,38 15,46 19,32 8,23 23,22" fill="rgba(0,229,255,.1)" stroke="rgba(0,229,255,.35)" stroke-width="1.2" stroke-linejoin="round"/><circle cx="28" cy="28" r="6" fill="rgba(0,229,255,.12)" stroke="rgba(0,229,255,.25)" stroke-width="1"/></svg>`,
+  epic:`<svg class="card-reward-icon" viewBox="0 0 56 56" fill="none"><circle cx="28" cy="28" r="24" stroke="rgba(168,85,247,.3)" stroke-width="1.5" stroke-dasharray="4 4"/><polygon points="28,6 34,22 50,23 38,33 42,49 28,40 14,49 18,33 6,23 22,22" fill="rgba(168,85,247,.1)" stroke="rgba(168,85,247,.4)" stroke-width="1.3" stroke-linejoin="round"/><polygon points="28,14 31,23 40,23.5 33,29 35,38 28,34 21,38 23,29 16,23.5 25,23" fill="rgba(168,85,247,.12)"/></svg>`,
+  mythic:`<svg class="card-reward-icon" viewBox="0 0 56 56" fill="none"><circle cx="28" cy="28" r="24" stroke="rgba(252,92,125,.35)" stroke-width="1.5"/><path d="M28 6 L32 20 L44 14 L36 26 L50 28 L36 30 L44 42 L32 36 L28 50 L24 36 L12 42 L20 30 L6 28 L20 26 L12 14 L24 20 Z" fill="rgba(252,92,125,.1)" stroke="rgba(252,92,125,.45)" stroke-width="1.3" stroke-linejoin="round"/><circle cx="28" cy="28" r="6" fill="rgba(252,92,125,.15)" stroke="rgba(252,92,125,.35)" stroke-width="1"/></svg>`,
+};
+
+async function init(){
+  const {data:{session}}=await sb.auth.getSession();
+  if(session)await loadProfile(session.user);
+  else showAuth();
+  document.getElementById('loadingScreen').style.display='none';
+  try{const {data}=await sb.from('site_config').select('value').eq('key','tasks').single();if(data?.value){const p=typeof data.value==='string'?JSON.parse(data.value):data.value;if(Array.isArray(p))cfg.tasks=p;}}catch(e){}
+}
+
+async function loadProfile(authUser){
+  user=authUser;
+  const {data,error}=await sb.from('profiles').select('*').eq('id',authUser.id).single();
+  if(error||!data){
+    const np={id:authUser.id,username:authUser.user_metadata?.username||authUser.email.split('@')[0],email:authUser.email,level:1,xp:0,coins:0,total_xp:0,tasks_completed:[],purchases:[],inventory:[],ref_code:genRef(),ref_by:null,ref_count:0,ref_earned:0,ttfka_earned:0,ttfka_spent:0};
+    await sb.from('profiles').insert(np);profile=np;
+  }else{profile=data;}
+  await loadTaskSubs();await loadContentSubs();showApp();
+}
+
+function genRef(){return Math.random().toString(36).substr(2,8).toUpperCase();}
+async function loadTaskSubs(){const {data}=await sb.from('task_submissions').select('*').eq('user_id',profile.id);taskSubs={};if(data)data.forEach(s=>{taskSubs[s.task_id]=s;});}
+async function loadContentSubs(){const {data}=await sb.from('content_submissions').select('*').eq('user_id',profile.id).order('created_at',{ascending:false});contentSubs=data||[];}
+
+function switchTab(tab,e){
+  document.querySelectorAll('.auth-form').forEach(f=>f.classList.remove('active'));
+  document.querySelectorAll('.auth-tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById(tab+'Form').classList.add('active');e.target.classList.add('active');
+  document.getElementById('authMsg').className='auth-msg';
+}
+
+async function handleLogin(){
+  const email=document.getElementById('loginEmail').value.trim();
+  const pass=document.getElementById('loginPass').value;
+  if(!email||!pass){setMsg('Заполни все поля','err');return;}
+  const btn=document.getElementById('loginBtn');btn.disabled=true;btn.textContent='ВХОДИМ...';
+  const {data,error}=await sb.auth.signInWithPassword({email,password:pass});
+  if(error){setMsg('Неверный email или пароль','err');btn.disabled=false;btn.textContent='ВОЙТИ';return;}
+  await loadProfile(data.user);
+}
+
+async function handleRegister(){
+  const username=document.getElementById('regUser').value.trim();
+  const email=document.getElementById('regEmail').value.trim();
+  const pass=document.getElementById('regPass').value;
+  const pass2=document.getElementById('regPass2').value;
+  const refCode=document.getElementById('regRef').value.trim().toUpperCase();
+  if(!username||!email||!pass){setMsg('Заполни все поля','err');return;}
+  if(username.length<3){setMsg('Ник минимум 3 символа','err');return;}
+  if(pass.length<6){setMsg('Пароль минимум 6 символов','err');return;}
+  if(pass!==pass2){setMsg('Пароли не совпадают','err');return;}
+  const btn=document.getElementById('regBtn');btn.disabled=true;btn.textContent='СОЗДАЁМ...';
+  const {data:ex}=await sb.from('profiles').select('id').eq('username',username).single();
+  if(ex){setMsg('Ник уже занят','err');btn.disabled=false;btn.textContent='СОЗДАТЬ АККАУНТ';return;}
+  let refById=null;
+  if(refCode){const {data:ru}=await sb.from('profiles').select('id').eq('ref_code',refCode).single();if(ru)refById=ru.id;}
+  const {data,error}=await sb.auth.signUp({email,password:pass,options:{data:{username}}});
+  if(error){setMsg('Ошибка регистрации','err');btn.disabled=false;btn.textContent='СОЗДАТЬ АККАУНТ';return;}
+  if(data.user){
+    const bonusCoins=refById?25:0;
+    const np={id:data.user.id,username,email,level:1,xp:0,coins:bonusCoins,total_xp:0,tasks_completed:[],purchases:[],inventory:[],ref_code:genRef(),ref_by:refById,ref_count:0,ref_earned:0,ttfka_earned:bonusCoins,ttfka_spent:0};
+    await sb.from('profiles').insert(np);
+    if(refById){const {data:rp}=await sb.from('profiles').select('coins,ref_count,ref_earned,ttfka_earned').eq('id',refById).single();if(rp)await sb.from('profiles').update({coins:(rp.coins||0)+50,ref_count:(rp.ref_count||0)+1,ref_earned:(rp.ref_earned||0)+50,ttfka_earned:(rp.ttfka_earned||0)+50}).eq('id',refById);}
+    await loadProfile(data.user);
+  }else{setMsg('Проверь почту!','ok');btn.disabled=false;btn.textContent='СОЗДАТЬ АККАУНТ';}
+}
+
+function setMsg(msg,type){const el=document.getElementById('authMsg');el.textContent=msg;el.className='auth-msg '+type;}
+async function logout(){if(confirm('Выйти?')){await sb.auth.signOut();user=null;profile=null;document.getElementById('app').classList.remove('visible');document.getElementById('authOverlay').classList.remove('hidden');}}
+
+function goTo(page){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('page-'+page).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n=>{if(n.getAttribute('onclick')===`goTo('${page}')`)n.classList.add('active');});
+  if(page==='tasks')renderTasks();
+  if(page==='shop')renderShop();
+  if(page==='daily')renderDaily();
+  if(page==='referral')renderReferral();
+  if(page==='content')renderContent();
+  if(page==='balance')renderBalance();
+  if(window.innerWidth<768)document.getElementById('sidebar').classList.remove('open');
+}
+function toggleSidebar(){document.getElementById('sidebar').classList.toggle('open');}
+
+function renderUI(){
+  if(!profile)return;
+  const av=profile.username[0].toUpperCase();
+  ['sideAvatar','profileAvatar'].forEach(id=>document.getElementById(id).textContent=av);
+  document.getElementById('sideName').textContent=profile.username;
+  document.getElementById('sideTTFKA').textContent=(profile.coins||0).toLocaleString();
+  document.getElementById('profileName').textContent=profile.username;
+  document.getElementById('profileEmail').textContent=profile.email||'—';
+  document.getElementById('profileLevel').textContent=profile.level;
+  document.getElementById('profileTTFKA').textContent=(profile.coins||0).toLocaleString();
+  document.getElementById('statLevel').textContent=profile.level;
+  document.getElementById('statTTFKA').textContent=(profile.coins||0).toLocaleString();
+  document.getElementById('statXP').textContent=(profile.total_xp||0).toLocaleString();
+  document.getElementById('statTasks').textContent=(profile.tasks_completed||[]).length;
+  const pct=Math.min(100,(profile.xp/cfg.xpPerLevel)*100);
+  document.getElementById('levelFill').style.width=pct+'%';
+  document.getElementById('xpProgress').textContent=`${profile.xp} / ${cfg.xpPerLevel} XP`;
+  renderRewards();renderPendingBadge();
+}
+
+const rewardPassIcons=[
+  `<svg viewBox="0 0 36 36" fill="none"><rect width="36" height="36" rx="9" fill="rgba(124,92,252,.08)"/><rect x="10" y="14" width="16" height="12" rx="3" stroke="rgba(167,139,250,.4)" stroke-width="1.3"/><path d="M13 14v-2a5 5 0 0110 0v2" stroke="rgba(167,139,250,.35)" stroke-width="1.3" stroke-linecap="round"/></svg>`,
+  `<svg viewBox="0 0 36 36" fill="none"><rect width="36" height="36" rx="9" fill="rgba(245,197,24,.07)"/><circle cx="18" cy="16" r="6" stroke="rgba(245,197,24,.4)" stroke-width="1.3"/><path d="M12 27c0-3.3 2.7-6 6-6s6 2.7 6 6" stroke="rgba(245,197,24,.35)" stroke-width="1.3" stroke-linecap="round"/></svg>`,
+  `<svg viewBox="0 0 36 36" fill="none"><rect width="36" height="36" rx="9" fill="rgba(252,92,125,.06)"/><path d="M8 27 L13 13 L18 19 L23 8 L28 27 Z" fill="rgba(252,92,125,.1)" stroke="rgba(252,92,125,.35)" stroke-width="1.2" stroke-linejoin="round"/></svg>`,
+  `<svg viewBox="0 0 36 36" fill="none"><rect width="36" height="36" rx="9" fill="rgba(0,229,255,.05)"/><polygon points="18,7 21,15 30,15 23,20 26,28 18,23 10,28 13,20 6,15 15,15" stroke="rgba(0,229,255,.35)" stroke-width="1.2" fill="rgba(0,229,255,.08)" stroke-linejoin="round"/></svg>`,
+  `<svg viewBox="0 0 36 36" fill="none"><rect width="36" height="36" rx="9" fill="rgba(0,230,118,.05)"/><path d="M18 26 L18 14 L13 19 L18 14 L23 19 L18 14" stroke="rgba(0,230,118,.4)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 24 L18 8 L22 24" fill="rgba(0,230,118,.07)" stroke="rgba(0,230,118,.3)" stroke-width="1.2" stroke-linejoin="round"/></svg>`,
+  `<svg viewBox="0 0 36 36" fill="none"><rect width="36" height="36" rx="9" fill="rgba(252,92,125,.08)"/><path d="M8 26 L13 10 L18 18 L23 6 L28 26 L8 26 Z" fill="rgba(252,92,125,.1)" stroke="rgba(252,92,125,.4)" stroke-width="1.3" stroke-linejoin="round"/></svg>`,
+];
+
+function renderRewards(){
+  const rewards=[{level:1,name:'100 TTFKA'},{level:5,name:'Значок'},{level:10,name:'VIP'},{level:25,name:'Elite'},{level:50,name:'2x XP'},{level:100,name:'Легенда'}];
+  document.getElementById('rewardsGrid').innerHTML=rewards.map((r,i)=>`<div class="reward-pass-item ${profile.level>=r.level?'unlocked':'locked'}"><div class="rp-icon">${rewardPassIcons[i]}</div><div class="rp-name">${r.name}</div><div class="rp-lvl">УР. ${r.level}</div></div>`).join('');
+}
+
+function renderPendingBadge(){const has=Object.values(taskSubs).some(s=>s.status==='rejected');document.getElementById('pendingBadge').style.display=has?'':'none';}
+
+function renderTasks(){
+  document.getElementById('tasksGrid').innerHTML=cfg.tasks.map(task=>{
+    const sub=taskSubs[task.id];
+    const isA=sub?.status==='approved',isP=sub?.status==='pending',isR=sub?.status==='rejected';
+    let sc,st,bc,bt;
+    if(isA){sc='s-approved';st='Одобрено';bc='tb-approved';bt='Одобрено';}
+    else if(isP){sc='s-pending';st='На проверке';bc='tb-pending';bt='На проверке';}
+    else if(isR){sc='s-rejected';st='Отклонено';bc='tb-rejected';bt='Отправить снова';}
+    else{sc='s-active';st='Активно';bc='tb-submit';bt='Отправить';}
+    const ok=!isA&&!isP;
+    const iconKey=task.icon in taskIcons?task.icon:'target';
+    return `<div class="task-card"><div class="task-inner">
+      <div class="task-top"><div class="task-icon-wrap">${taskIcons[iconKey]}</div><div class="task-status ${sc}">${st}</div></div>
+      <div class="task-name">${task.name}</div><div class="task-desc">${task.desc}</div>
+      <div class="task-rewards">
+        <div class="reward-pill"><svg viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5" stroke="rgba(167,139,250,.5)" stroke-width="1"/><circle cx="6" cy="6" r="2" fill="rgba(167,139,250,.4)"/></svg><span class="rval">+${task.xp} XP</span></div>
+        <div class="reward-pill"><svg viewBox="0 0 12 12" fill="none"><polygon points="6,1 7.5,4.5 11,5 8.5,7.5 9,11 6,9.5 3,11 3.5,7.5 1,5 4.5,4.5" stroke="rgba(245,197,24,.5)" stroke-width="1" fill="rgba(245,197,24,.15)"/></svg><span class="rval">+${task.coins} TTFKA</span></div>
+      </div>
+      <div class="task-divider"></div>
+      <button class="task-btn ${bc}" ${!ok?'disabled':''} onclick="submitTask('${task.id}')">${bt}</button>
+      ${isR&&sub?.reject_reason?`<div class="reject-reason">Причина: ${sub.reject_reason}</div>`:''}
+    </div></div>`;
+  }).join('');
+}
+
+async function submitTask(taskId){
+  const task=cfg.tasks.find(t=>t.id===taskId);if(!task)return;
+  const sub=taskSubs[taskId];
+  if(sub?.status==='pending'){notify('Уже на проверке!');return;}
+  if(sub?.status==='approved')return;
+  if(sub?.status==='rejected')await sb.from('task_submissions').delete().eq('id',sub.id);
+  const {data,error}=await sb.from('task_submissions').insert({user_id:profile.id,username:profile.username,task_id:taskId,task_title:task.name,reward_coins:task.coins,reward_xp:task.xp,status:'pending'}).select().single();
+  if(error){notify('Ошибка: '+error.message);return;}
+  taskSubs[taskId]=data;
+  sendEmail(`Заявка: ${task.name} от ${profile.username}`,`Игрок: ${profile.username}<br>Задание: ${task.name}<br>Награда: ${task.xp} XP + ${task.coins} TTFKA`);
+  notify('Задание отправлено на проверку!');renderTasks();
+}
+
+let dailyCardsData=[],dailyDone=false;
+function rand(a,b){return Math.floor(Math.random()*(b-a+1))+a;}
+
+function renderDaily(){
+  const today=new Date().toDateString();
+  dailyDone=localStorage.getItem('ttfd_'+profile.id)===today;
+  const ds=document.getElementById('dailyStatus');
+  if(dailyDone)ds.style.display='flex'; else ds.style.display='none';
+  const pool=[
+    {r:'common',n:'TTFKA Бонус',amt:()=>rand(5,20),rt:'rt-common',rl:'Обычный',rc:'rarity-common',ico:'common'},
+    {r:'common',n:'TTFKA Бонус',amt:()=>rand(5,20),rt:'rt-common',rl:'Обычный',rc:'rarity-common',ico:'common'},
+    {r:'common',n:'TTFKA Бонус',amt:()=>rand(5,20),rt:'rt-common',rl:'Обычный',rc:'rarity-common',ico:'common'},
+    {r:'rare',n:'TTFKA Бонус',amt:()=>rand(25,75),rt:'rt-rare',rl:'Редкий',rc:'rarity-rare',ico:'rare'},
+    {r:'rare',n:'TTFKA Бонус',amt:()=>rand(25,75),rt:'rt-rare',rl:'Редкий',rc:'rarity-rare',ico:'rare'},
+    {r:'epic',n:'Эпик Бонус',amt:()=>rand(100,200),rt:'rt-epic',rl:'Эпический',rc:'rarity-epic',ico:'epic'},
+    {r:'mythic',n:'JACKPOT!',amt:()=>rand(250,500),rt:'rt-mythic',rl:'Мифический',rc:'rarity-mythic',ico:'mythic'},
+  ];
+  const s=today+profile.id;let h=0;for(let i=0;i<s.length;i++)h=Math.imul(31,h)+s.charCodeAt(i)|0;
+  const sh=[...pool].sort((a,b)=>((h^a.r.charCodeAt(0))-(h^b.r.charCodeAt(0))));
+  dailyCardsData=[sh[0],sh[1],sh[2]];
+  for(let i=0;i<3;i++){
+    const c=document.getElementById('dc'+i);
+    c.className='daily-card'+(dailyDone?' claimed':'');
+    c.querySelector('.card-front').innerHTML='';
+  }
+}
+
+async function openDailyCard(idx){
+  if(dailyDone){notify('Возвращайся завтра!');return;}
+  const today=new Date().toDateString();
+  const d=dailyCardsData[idx];const amount=d.amt();
+  dailyDone=true;localStorage.setItem('ttfd_'+profile.id,today);
+  document.getElementById('dailyStatus').style.display='flex';
+  for(let i=0;i<3;i++){if(i!==idx)document.getElementById('dc'+i).classList.add('claimed');}
+  const card=document.getElementById('dc'+idx);
+  card.classList.add('opened',d.rc);
+  card.querySelector('.card-front').innerHTML=`
+    <div class="rarity-tag ${d.rt}">${d.rl}</div>
+    ${rewardIcons[d.ico]||rewardIcons.common}
+    <div class="card-reward-name">${d.n}</div>
+    <div class="card-reward-amount">+${amount} TTFKA</div>`;
+  profile.coins=(profile.coins||0)+amount;profile.ttfka_earned=(profile.ttfka_earned||0)+amount;
+  await sb.from('profiles').update({coins:profile.coins,ttfka_earned:profile.ttfka_earned}).eq('id',profile.id);
+  renderUI();notify(`${d.rl}! +${amount} TTFKA`);
+}
+
+function renderShop(cat='roles'){
+  const cats=['roles','access','cosmetics','boosters'];
+  const catLabels={roles:'Роли',access:'Доступы',cosmetics:'Визуал',boosters:'Бусты'};
+  const catIcons={
+    roles:`<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 12 L4 5 L7 8 L10 2 L12 12 Z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round" fill="none"/></svg>`,
+    access:`<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="2" y="6" width="10" height="7" rx="2" stroke="currentColor" stroke-width="1.2"/><path d="M4 6V4a3 3 0 016 0v2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>`,
+    cosmetics:`<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="6" r="4" stroke="currentColor" stroke-width="1.2"/><path d="M4 10.5c0-1.7 1.34-3 3-3s3 1.3 3 3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>`,
+    boosters:`<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 12 L7 5 L4 8 L7 5 L10 8 L7 5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  };
+  document.getElementById('shopFilters').innerHTML=cats.map(c=>`<button class="filter-btn ${c===cat?'active':''}" onclick="renderShop('${c}')">${catIcons[c]}${catLabels[c]}</button>`).join('');
+  document.getElementById('shopGrid').innerHTML=cfg.shopItems.filter(i=>i.category===cat).map(item=>`
+    <div class="shop-card">
+      <div class="shop-icon-wrap">${shopIcons[item.icon]||''}</div>
+      <div class="shop-name">${item.name}</div>
+      <div class="shop-desc">${item.desc}</div>
+      <div class="shop-price">
+        <svg viewBox="0 0 16 16" fill="none"><polygon points="8,1.5 10,6.5 15.5,7 11.5,10.5 12.5,16 8,13.5 3.5,16 4.5,10.5 0.5,7 6,6.5" fill="rgba(245,197,24,.2)" stroke="#f5c518" stroke-width="1" stroke-linejoin="round"/></svg>
+        ${item.price}
+      </div>
+      <button class="shop-btn" onclick="buyItem(${item.id})">КУПИТЬ</button>
+    </div>`).join('');
+}
+
+function buyItem(itemId){
+  const item=cfg.shopItems.find(i=>i.id===itemId);if(!item)return;
+  if((profile.purchases||[]).includes(itemId)){notify('Уже куплено!');return;}
+  if(profile.coins<item.price){notify('Недостаточно TTFKA!');return;}
+  document.getElementById('purchaseDetails').innerHTML=`<div style="text-align:center;padding:1rem 0;">
+    <div style="display:flex;justify-content:center;margin-bottom:.75rem;">${shopIcons[item.icon]||''}</div>
+    <div style="font-weight:700;font-size:1.05rem;margin-bottom:.3rem;">${item.name}</div>
+    <div style="color:var(--sub);font-size:.82rem;margin-bottom:1rem;">${item.desc}</div>
+    <div style="background:rgba(245,197,24,.06);border:1px solid rgba(245,197,24,.18);padding:.8rem;border-radius:12px;">
+      <div style="font-size:.72rem;color:var(--sub);margin-bottom:.25rem;text-transform:uppercase;letter-spacing:.08rem;">Стоимость</div>
+      <div style="font-family:'Orbitron',sans-serif;font-size:1.55rem;font-weight:900;color:var(--gold);">${item.price} TTFKA</div>
+    </div></div>`;
+  document.getElementById('confirmPurchaseBtn').onclick=async()=>{
+    profile.coins-=item.price;profile.ttfka_spent=(profile.ttfka_spent||0)+item.price;
+    if(!profile.purchases)profile.purchases=[];profile.purchases.push(itemId);
+    await sb.from('profiles').update({coins:profile.coins,ttfka_spent:profile.ttfka_spent,purchases:profile.purchases}).eq('id',profile.id);
+    renderUI();closeModal('purchaseModal');notify(`Куплено: ${item.name}`);
+  };
+  document.getElementById('purchaseModal').classList.add('active');
+}
+
+function renderReferral(){
+  document.getElementById('refLink').textContent=`${SITE_URL}/battlepass.html?ref=${profile.ref_code||'—'}`;
+  document.getElementById('refCount').textContent=profile.ref_count||0;
+  document.getElementById('refEarned').textContent=profile.ref_earned||0;
+  const cnt=profile.ref_count||0;
+  document.getElementById('refRank').textContent=cnt>=10?'Легенда':cnt>=5?'Ветеран':cnt>=1?'Новичок':'—';
+}
+
+function copyRef(){navigator.clipboard.writeText(document.getElementById('refLink').textContent).then(()=>notify('Ссылка скопирована!'));}
+
+function renderContent(){
+  if(!contentSubs.length){document.getElementById('myContentSubmissions').innerHTML='<div style="color:var(--sub);font-size:.83rem;padding:.5rem 0;">Заявок пока нет.</div>';return;}
+  const tl={youtube:`<svg width="24" height="24" viewBox="0 0 24 24" fill="none"><rect x="2" y="5" width="20" height="14" rx="4" stroke="rgba(252,92,125,.5)" stroke-width="1.4"/><path d="M10 9l5 3-5 3V9z" fill="rgba(252,92,125,.4)" stroke="rgba(252,92,125,.5)" stroke-width="1"/></svg>`,shorts:`<svg width="24" height="24" viewBox="0 0 24 24" fill="none"><rect x="7" y="2" width="10" height="18" rx="4" stroke="rgba(0,229,255,.5)" stroke-width="1.4"/><path d="M10 9l4 3-4 3V9z" fill="rgba(0,229,255,.3)"/></svg>`,tiktok:`<svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M9 17a5 5 0 115-5v-9" stroke="rgba(167,139,250,.5)" stroke-width="1.5" stroke-linecap="round"/><path d="M14 3c1 2 3 3 5 3" stroke="rgba(167,139,250,.4)" stroke-width="1.4" stroke-linecap="round"/></svg>`,collab:`<svg width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="8" cy="8" r="3.5" stroke="rgba(0,230,118,.5)" stroke-width="1.3"/><path d="M3 20c0-3 2.2-5 5-5" stroke="rgba(0,230,118,.4)" stroke-width="1.3" stroke-linecap="round"/><circle cx="16" cy="11" r="3" stroke="rgba(0,230,118,.4)" stroke-width="1.3"/><path d="M13 20c0-2.5 1.8-4 4-4" stroke="rgba(0,230,118,.35)" stroke-width="1.3" stroke-linecap="round"/></svg>`};
+  const tn={youtube:'YouTube',shorts:'Shorts',tiktok:'TikTok',collab:'Совместный'};
+  document.getElementById('myContentSubmissions').innerHTML=contentSubs.map(s=>`
+    <div class="submission-item">
+      <div class="sub-thumb">${tl[s.content_type]||tl.youtube}</div>
+      <div class="sub-info">
+        <div class="sub-title">${tn[s.content_type]||s.content_type}</div>
+        <div class="sub-meta"><a href="${s.url}" target="_blank" style="color:var(--primary2);">${s.url.slice(0,50)}...</a></div>
+        ${s.reject_reason?`<div style="font-size:.72rem;color:var(--accent);margin-top:.2rem;">Причина: ${s.reject_reason}</div>`:''}
+      </div>
+      <div class="sub-status ss-${s.status}">${{pending:'На проверке',approved:`+${s.reward_ttfka||0} TTFKA`,rejected:'Отклонено'}[s.status]}</div>
+    </div>`).join('');
+}
+
+async function submitContent(){
+  const type=document.getElementById('contentType').value;
+  const url=document.getElementById('contentUrl').value.trim();
+  const desc=document.getElementById('contentDesc').value.trim();
+  if(!url){notify('Введи ссылку');return;}
+  if(!url.startsWith('http')){notify('Неверная ссылка');return;}
+  const {data,error}=await sb.from('content_submissions').insert({user_id:profile.id,username:profile.username,content_type:type,url,description:desc,status:'pending',reward_ttfka:0}).select().single();
+  if(error){notify('Ошибка: '+error.message);return;}
+  contentSubs.unshift(data);
+  document.getElementById('contentUrl').value='';document.getElementById('contentDesc').value='';
+  sendEmail(`Контент от ${profile.username}`,`Тип: ${type}<br>Ссылка: <a href="${url}">${url}</a><br>Описание: ${desc||'—'}`);
+  notify('Ролик отправлен на проверку!');renderContent();
+}
+
+function renderBalance(){
+  document.getElementById('balTTFKA').textContent=(profile.coins||0).toLocaleString();
+  document.getElementById('balSpent').textContent=(profile.ttfka_spent||0).toLocaleString();
+  document.getElementById('balEarned').textContent=(profile.ttfka_earned||0).toLocaleString();
+}
+
+async function sendEmail(subject,body){
+  try{await fetch('https://api.resend.com/emails',{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${RESEND_KEY}`},body:JSON.stringify({from:'battlepass@resend.dev',to:ADMIN_EMAIL,subject,html:`<div style="font-family:Arial;background:#07070f;color:#fff;padding:2rem;border-radius:12px;max-width:500px;"><h2 style="color:#7c5cfc;">TTFHub</h2>${body}<br><a href="${SITE_URL}/admin.html" style="display:inline-block;background:linear-gradient(135deg,#7c5cfc,#fc5c7d);color:#fff;padding:.75rem 1.5rem;border-radius:8px;text-decoration:none;font-weight:bold;margin-top:1rem;">Открыть панель</a></div>`})});}catch(e){}
+}
+
+function notify(msg){
+  const n=document.createElement('div');n.className='notif';
+  n.innerHTML=`<svg class="notif-icon" viewBox="0 0 28 28" fill="none"><rect width="28" height="28" rx="8" fill="rgba(124,92,252,.15)" stroke="rgba(124,92,252,.3)" stroke-width="1"/><path d="M9 14l3 3 7-7" stroke="rgba(167,139,250,.8)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg><span>${msg}</span>`;
+  document.body.appendChild(n);setTimeout(()=>n.remove(),3500);
+}
+
+function closeModal(id){document.getElementById(id).classList.remove('active');}
+function showApp(){document.getElementById('authOverlay').classList.add('hidden');document.getElementById('app').classList.add('visible');renderUI();}
+function showAuth(){document.getElementById('authOverlay').classList.remove('hidden');document.getElementById('app').classList.remove('visible');}
+
+async function loadAdminBanner(){
+  try{
+    const {data}=await sb.from('site_config').select('value').eq('key','site_notification').single();
+    const n=data?.value;
+    if(n&&n.active&&n.text){
+      const banner=document.getElementById('adminBanner');
+      banner.className='type-'+(n.type||'info');banner.style.display='flex';
+      document.getElementById('bannerIcon').textContent=n.icon||'';
+      document.getElementById('bannerText').textContent=n.text;
+    }
+  }catch(e){}
+}
+setInterval(loadAdminBanner,30000);
+loadAdminBanner();
+
+const urlRef=new URLSearchParams(location.search).get('ref');
+if(urlRef)document.getElementById('regRef').value=urlRef;
+
+init();
+</script>
+</body>
+</html>
